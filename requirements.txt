@@ -1,19 +1,10 @@
 # Anchor — Face Recognition Module
 # ==================================
 #
-# IMPORTANT: `face_recognition` depends on `dlib`, which requires:
-#   - CMake          (https://cmake.org/download/)
-#   - A C++ compiler (MSVC on Windows, g++ on Linux/macOS)
-#
-# On Windows this is the trickiest step. The easiest path is:
-#   1. Install Visual Studio Build Tools (with "Desktop development with C++")
-#   2. Install CMake and add it to PATH
-#   3. Then: pip install -r requirements.txt
-#
-# On macOS/Linux it's usually just:
-#   brew install cmake   (or)   sudo apt install cmake g++
-#   pip install -r requirements.txt
+# Uses MediaPipe FaceLandmarker for on-device face detection and
+# geometric landmark-based recognition.  No dlib or C++ compiler
+# required — installs cleanly via pip on all platforms.
 
 opencv-python>=4.8.0
-face_recognition>=1.3.0
+mediapipe>=1.0.0
 numpy>=1.24.0

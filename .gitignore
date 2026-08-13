@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# MediaPipe model file (large binary — download at setup time)
+anchor_face/face_landmarker.task

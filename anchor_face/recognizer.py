@@ -3,33 +3,63 @@ anchor_face.recognizer
 ======================
 
 Core recognition engine.  ``FaceRecognizer`` owns the camera loop,
-compares every detected face against a pre-computed roster of 128-d
-encodings, and emits debounced ``on_recognized`` / ``on_unrecognized``
-events so the rest of Anchor never sees per-frame flicker.
+detects faces using MediaPipe's FaceLandmarker, extracts a geometric
+encoding from 478 3D face landmarks, and compares it against a
+pre-computed roster of known encodings.
+
+Debounced ``on_recognized`` / ``on_unrecognized`` events ensure the
+rest of Anchor never sees per-frame flicker.
 
 Privacy: everything runs on-device — no frames or encodings leave the
-machine.
+machine.  The FaceLandmarker model is bundled locally.
+
+NOTE: The original spec called for ``face_recognition`` (dlib), but
+dlib requires CMake + a C++ compiler and has no pre-built wheel for
+Python 3.14.  MediaPipe 1.0 installs cleanly via pip on all platforms
+and provides equivalent face detection + landmark extraction.  We derive
+a geometric encoding from the normalised 3D landmarks — this is less
+discriminative than a deep-learned 128-d embedding, but works well for
+the small-roster, single-camera scenario Anchor targets.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, List, Optional, Sequence
 
 import cv2
-import face_recognition
+import mediapipe as mp
 import numpy as np
+from mediapipe.tasks.python import BaseOptions
+from mediapipe.tasks.python.vision import (
+    FaceLandmarker,
+    FaceLandmarkerOptions,
+    RunningMode,
+)
 from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Path to the bundled FaceLandmarker model (downloaded once, lives with the
+# package so nothing is fetched at runtime).
+_MODEL_PATH = str(Path(__file__).parent / "face_landmarker.task")
+
+# Number of facial landmarks MediaPipe returns per face.
+_NUM_LANDMARKS = 478
+
+# ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
 
-# A 128-dimensional float vector produced by face_recognition.face_encodings()
+# A flattened vector of landmark (x, y, z) coordinates, centred and scaled.
 Encoding = NDArray[np.float64]
 
 
@@ -42,13 +72,63 @@ class PersonRecord:
     person_id : str
         Unique identifier / display name (e.g. ``"daughter_priya"``).
     encodings : list[Encoding]
-        One or more 128-d face encodings computed **once** at registration
-        time and reused on every scan.  More encodings → better recall
-        across angles and lighting.
+        One or more geometric face encodings computed **once** at
+        registration time and reused on every scan.  More encodings
+        → better recall across angles and lighting.
     """
 
     person_id: str
     encodings: List[Encoding] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Encoding helpers
+# ---------------------------------------------------------------------------
+
+
+def compute_encoding(
+    frame_bgr: NDArray[np.uint8],
+    landmarker: FaceLandmarker,
+) -> Optional[Encoding]:
+    """Detect a face in *frame_bgr* and return a geometric encoding.
+
+    The encoding is a 1-D array of ``_NUM_LANDMARKS * 3`` floats
+    representing the normalised, centred, and scale-invariant (x, y, z)
+    landmark positions.  Returns ``None`` if no face is detected.
+    """
+    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(
+        image_format=mp.ImageFormat.SRGB,
+        data=rgb,
+    )
+    result = landmarker.detect(mp_image)
+
+    if not result.face_landmarks:
+        return None
+
+    # Take the first (largest/most-prominent) face.
+    landmarks = result.face_landmarks[0]
+    coords = np.array(
+        [[lm.x, lm.y, lm.z] for lm in landmarks],
+        dtype=np.float64,
+    )  # shape (_NUM_LANDMARKS, 3)
+
+    # Centre on the nose tip (landmark 1) and normalise by inter-ocular
+    # distance (landmarks 33 = right eye inner, 263 = left eye inner) to
+    # make the encoding translation- and scale-invariant.
+    nose = coords[1]
+    coords -= nose
+
+    eye_dist = np.linalg.norm(coords[33] - coords[263])
+    if eye_dist > 1e-6:
+        coords /= eye_dist
+
+    return coords.flatten()
+
+
+def encoding_distance(a: Encoding, b: Encoding) -> float:
+    """Euclidean distance between two geometric encodings."""
+    return float(np.linalg.norm(a - b))
 
 
 # ---------------------------------------------------------------------------
@@ -64,9 +144,9 @@ class FaceRecognizer:
     roster : Sequence[PersonRecord]
         Pre-registered people with their face encodings.
     tolerance : float
-        Maximum face-distance to count as a match (lower ⟹ stricter).
-        ``face_recognition`` recommends ~0.6 for general use; Anchor
-        defaults to 0.5 for fewer false positives.
+        Maximum encoding distance to count as a match (lower ⟹ stricter).
+        Geometric landmark encodings typically range 0–2; default 0.45
+        is a reasonable starting point for a small roster.
     enter_streak : int
         How many consecutive matching frames are required before
         ``on_recognized`` fires (debounce for entering "confirmed" state).
@@ -87,7 +167,7 @@ class FaceRecognizer:
     on_unrecognized : callable, optional
         ``fn() -> None`` — called once when the confirmed person has
         left frame.  This is the hook where Anchor would stop STT and
-        send the transcript for summarization (handled elsewhere).
+        send the transcript for summarisation (handled elsewhere).
     """
 
     # ---- construction ----
@@ -96,7 +176,7 @@ class FaceRecognizer:
         self,
         roster: Sequence[PersonRecord],
         *,
-        tolerance: float = 0.5,
+        tolerance: float = 0.45,
         enter_streak: int = 3,
         exit_streak: int = 4,
         scan_interval_sec: float = 0.5,
@@ -107,8 +187,8 @@ class FaceRecognizer:
     ) -> None:
         # ---- roster ----
         self._roster: List[PersonRecord] = list(roster)
-        # Pre-stack all known encodings and their person-ids into parallel
-        # arrays so matching is a single vectorised call.
+        # Pre-collect all known encodings and their person-ids into
+        # parallel lists so matching is a single pass.
         self._known_encodings: List[Encoding] = []
         self._known_ids: List[str] = []
         for person in self._roster:
@@ -136,6 +216,9 @@ class FaceRecognizer:
 
         # ---- run control ----
         self._running: bool = False
+
+        # ---- MediaPipe landmarker (initialised in start()) ----
+        self._landmarker: Optional[FaceLandmarker] = None
 
     # ---- public helpers ----
 
@@ -166,13 +249,30 @@ class FaceRecognizer:
         The loop:
         1. Grabs a frame from the webcam.
         2. If enough time has passed since the last scan, resizes the
-           frame and runs face detection + encoding.
-        3. Compares every detected face against the roster and picks the
-           closest match (if within tolerance).
+           frame and runs face landmark detection.
+        3. Computes a geometric encoding and compares it against the
+           roster to find the closest match within tolerance.
         4. Feeds the per-frame result into the debounce state machine.
         5. Fires ``on_recognized`` / ``on_unrecognized`` when a state
            transition occurs.
         """
+        if not os.path.exists(_MODEL_PATH):
+            raise FileNotFoundError(
+                f"FaceLandmarker model not found at {_MODEL_PATH}. "
+                "Run the download step from the README."
+            )
+
+        # Create the MediaPipe FaceLandmarker.
+        options = FaceLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=_MODEL_PATH),
+            running_mode=RunningMode.IMAGE,
+            num_faces=1,
+            min_face_detection_confidence=0.5,
+            min_face_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        self._landmarker = FaceLandmarker.create_from_options(options)
+
         cap = cv2.VideoCapture(self.camera_index)
         if not cap.isOpened():
             raise RuntimeError(
@@ -214,14 +314,17 @@ class FaceRecognizer:
         except KeyboardInterrupt:
             logger.info("Interrupted — shutting down recognition loop.")
         finally:
-            # Clean shutdown: always release the camera.
+            # Clean shutdown: always release the camera and landmarker.
             cap.release()
+            if self._landmarker:
+                self._landmarker.close()
+                self._landmarker = None
             logger.info("Camera released.")
 
     # ---- internals ----
 
     def _process_frame(self, frame: NDArray[np.uint8]) -> Optional[str]:
-        """Detect faces in *frame*, return the ``person_id`` of the best
+        """Detect a face in *frame*, return the ``person_id`` of the best
         match within tolerance, or ``None`` if nobody is recognised.
 
         Parameters
@@ -234,6 +337,8 @@ class FaceRecognizer:
         str or None
             The matched person_id, or None.
         """
+        assert self._landmarker is not None
+
         # Resize for speed.
         small = cv2.resize(
             frame,
@@ -241,39 +346,32 @@ class FaceRecognizer:
             fx=self.frame_scale,
             fy=self.frame_scale,
         )
-        # face_recognition expects RGB; OpenCV gives BGR.
-        rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
 
-        # Detect face bounding boxes, then compute 128-d encodings.
-        face_locations = face_recognition.face_locations(rgb, model="hog")
-        if not face_locations:
+        # Compute encoding via MediaPipe landmarks.
+        enc = compute_encoding(small, self._landmarker)
+        if enc is None:
             return None
 
-        face_encs = face_recognition.face_encodings(rgb, face_locations)
-        if not face_encs or not self._known_encodings:
+        if not self._known_encodings:
             return None
 
-        # For each detected face, compute distances to every known
-        # encoding and pick the global best match.
+        # Compare against every known encoding and pick the best.
         best_id: Optional[str] = None
         best_dist: float = float("inf")
 
-        for enc in face_encs:
-            distances = face_recognition.face_distance(
-                self._known_encodings, enc
-            )
-            min_idx = int(np.argmin(distances))
-            min_dist = float(distances[min_idx])
-
-            if min_dist < best_dist:
-                best_dist = min_dist
-                best_id = self._known_ids[min_idx]
+        for known_enc, known_id in zip(
+            self._known_encodings, self._known_ids
+        ):
+            dist = encoding_distance(enc, known_enc)
+            if dist < best_dist:
+                best_dist = dist
+                best_id = known_id
 
         if best_dist <= self.tolerance:
             logger.debug("Match: %s (distance %.3f)", best_id, best_dist)
             return best_id
 
-        # Face(s) detected but none matched — treated as "unknown".
+        # Face detected but didn't match anyone — treated as "unknown".
         logger.debug(
             "Face detected but no match (best distance %.3f > tolerance %.2f)",
             best_dist, self.tolerance,
@@ -313,7 +411,7 @@ class FaceRecognizer:
                     self._pending_person = None
                     self._match_counter = 0
                     self._miss_counter = 0
-                    logger.info("✅ Recognized: %s", match_id)
+                    logger.info("Recognized: %s", match_id)
                     if self._on_recognized:
                         self._on_recognized(match_id)
             else:
@@ -336,6 +434,6 @@ class FaceRecognizer:
                     self._miss_counter = 0
                     self._match_counter = 0
                     self._pending_person = None
-                    logger.info("👋 %s left frame.", left_person)
+                    logger.info("%s left frame.", left_person)
                     if self._on_unrecognized:
                         self._on_unrecognized()
