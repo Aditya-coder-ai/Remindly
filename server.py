@@ -45,6 +45,7 @@ PORT = 8000
 HOST = "0.0.0.0"
 
 BASE_DIR = Path(__file__).resolve().parent
+DIST_DIR = BASE_DIR / "dist"
 STATIC_DIR = BASE_DIR / "static"
 CONV_DIR = BASE_DIR / "conversation_memory"
 PATIENT_DIR = BASE_DIR / "patient_view"
@@ -172,12 +173,22 @@ async def video_feed():
     async def frame_stream():
         while True:
             jpeg = recognition_service.get_latest_frame_jpeg()
-            if jpeg:
-                yield (b"--frame\r\n"
-                       b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
+            yield (b"--frame\r\n"
+                   b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
             await asyncio.sleep(0.06)
 
     return StreamingResponse(frame_stream(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.get("/camera_snapshot")
+async def camera_snapshot():
+    """Return a single live JPEG snapshot from the webcam stream."""
+    jpeg = recognition_service.get_latest_frame_jpeg()
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"},
+    )
 
 
 @app.get("/api/roster")
@@ -398,6 +409,9 @@ async def proxy_groq(request: Request):
 # Static File Mounts
 # ---------------------------------------------------------------------------
 
+if (DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -410,12 +424,12 @@ if PATIENT_DIR.exists():
 
 @app.get("/")
 async def root_index():
-    index_path = STATIC_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    demo_path = CONV_DIR / "demo.html"
-    if demo_path.exists():
-        return FileResponse(str(demo_path))
+    dist_index = DIST_DIR / "index.html"
+    if dist_index.exists():
+        return FileResponse(str(dist_index))
+    static_index = STATIC_DIR / "index.html"
+    if static_index.exists():
+        return FileResponse(str(static_index))
     return HTMLResponse("<h1>Anchor Dementia-Care Companion Server is Running</h1>")
 
 

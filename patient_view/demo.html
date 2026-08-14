@@ -3,113 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anchor — Patient View Component Harness</title>
-  <link rel="stylesheet" href="./patient_view.css" />
+  <title>Anchor — Patient View Demo</title>
   <style>
-    /* Demo floating controls bar */
-    .demo-bar {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(8px);
-      border: 1px solid #dcd6cc;
-      border-radius: 12px;
-      padding: 10px 16px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      z-index: 1000;
+    /* Demo harness chrome only — not part of the patient-facing component. */
+    :root {
+      --accent: #27523d;
+      --text: #2b2b2b;
+      --muted: #6b6b6b;
+      --border: #dcd6cc;
+      --bg: #f4f1ec;
     }
-    .demo-bar button {
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid #27523d;
-      background: #27523d;
-      color: white;
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    #demoRoot, .pv-demo {
+      height: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .pv-demo-view {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+      background: #ffffff;
+    }
+    .pv-demo-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
       font-size: 13px;
+    }
+    .pv-demo-bar-title {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pv-demo-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .pv-demo-buttons button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fafaf8;
+      font: inherit;
       font-weight: 600;
       cursor: pointer;
-      font-family: inherit;
     }
-    .demo-bar button.secondary {
-      background: #f8f6f0;
-      color: #1b2620;
-      border-color: #dcd6cc;
+    .pv-demo-buttons button:hover { border-color: var(--accent); }
+    .pv-demo-buttons button.on {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
     }
-    .demo-bar label {
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
+    .pv-demo-buttons .pv-demo-leave {
+      background: #5b6670;
+      border-color: #5b6670;
+      color: #ffffff;
+    }
+    .pv-demo-tts {
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-left: 6px;
+      font-weight: 600;
+    }
+    .pv-demo-state {
+      margin-left: auto;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    @media (max-width: 640px) {
+      .pv-demo-state { margin-left: 0; }
     }
   </style>
 </head>
 <body>
-
-  <!-- Component mount point -->
-  <div id="patientViewApp"></div>
-
-  <!-- Test harness controls -->
-  <div class="demo-bar">
-    <button id="btnPriya">Priya (Daughter)</button>
-    <button id="btnTom">Tom (Grandson)</button>
-    <button id="btnNewPerson">Sarah (No Prior History)</button>
-    <button id="btnNobody" class="secondary">Nobody in Frame (Clock)</button>
-    <label>
-      <input type="checkbox" id="chkSpeech" />
-      Read Aloud (TTS)
-    </label>
-  </div>
-
-  <script type="module">
-    import { PatientView } from "./patient_view.js";
-
-    const container = document.getElementById("patientViewApp");
-    const pv = new PatientView(container, { enableSpeech: false });
-
-    // Mock records
-    const people = {
-      priya: {
-        name: "Priya",
-        relationship: "Daughter",
-        note: "Priya brought fresh chamomile tea and you looked through photos from the lake house together.",
-      },
-      tom: {
-        name: "Tom",
-        relationship: "Grandson",
-        note: "Tom showed you his new bicycle and told you about his soccer match.",
-      },
-      sarah: {
-        name: "Sarah",
-        relationship: "Sister",
-        note: null, // Graceful no-history test
-      },
-    };
-
-    document.getElementById("btnPriya").addEventListener("click", () => {
-      pv.setRecognizedPerson(people.priya);
-    });
-
-    document.getElementById("btnTom").addEventListener("click", () => {
-      pv.setRecognizedPerson(people.tom);
-    });
-
-    document.getElementById("btnNewPerson").addEventListener("click", () => {
-      pv.setRecognizedPerson(people.sarah);
-    });
-
-    document.getElementById("btnNobody").addEventListener("click", () => {
-      pv.setRecognizedPerson(null);
-    });
-
-    document.getElementById("chkSpeech").addEventListener("change", (e) => {
-      pv.enableSpeech = e.target.checked;
-    });
-  </script>
+  <div id="demoRoot"></div>
+  <script type="module" src="./src/bootstrapDemo.jsx"></script>
 </body>
 </html>

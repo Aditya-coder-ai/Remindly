@@ -1,6 +1,6 @@
 """
 Integration & System Test for Anchor
-Verifies storage, service lifecycle, and API endpoints.
+Verifies storage, service lifecycle, biometric recognition, and API endpoints.
 """
 
 import json
@@ -8,12 +8,38 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+import numpy as np
 
 from fastapi.testclient import TestClient
 
 from anchor_face.storage import RosterStorage
 from anchor_face.service import RecognitionService
+from anchor_face.recognizer import (
+    FaceRecognizer,
+    PersonRecord,
+    encoding_distance,
+    calculate_confidence,
+)
 from server import app
+
+def test_biometrics():
+    print("Testing Biometric Math & Alignment...")
+    # Create two synthetic unit encodings
+    v1 = np.random.randn(220)
+    v1 /= np.linalg.norm(v1)
+    
+    v2 = v1.copy()
+    assert encoding_distance(v1, v2) == 0.0
+    assert calculate_confidence(0.0) == 1.0
+
+    # Slight perturbation (same person across frames)
+    v3 = v1 + np.random.randn(220) * 0.01
+    v3 /= np.linalg.norm(v3)
+    dist = encoding_distance(v1, v3)
+    assert dist < 0.25, f"Expected small distance, got {dist}"
+    conf = calculate_confidence(dist, tolerance=0.38)
+    assert conf > 0.6, f"Expected high confidence, got {conf}"
+    print(f"  [OK] Biometric vector matching passed (perturbed dist={dist:.3f}, conf={conf:.1%}).")
 
 def test_storage():
     print("Testing RosterStorage...")
@@ -34,6 +60,19 @@ def test_storage():
         )
         assert p.name == "Test User"
         
+        # Test add encoding & clear encodings
+        dummy_enc = np.random.randn(220)
+        dummy_enc /= np.linalg.norm(dummy_enc)
+        added = storage.add_encoding("test_user", dummy_enc)
+        assert added is True
+        p_with_enc = storage.get_profile("test_user")
+        assert len(p_with_enc.encodings) == 1
+
+        cleared = storage.clear_encodings("test_user")
+        assert cleared is True
+        p_cleared = storage.get_profile("test_user")
+        assert len(p_cleared.encodings) == 0
+
         # Test update note & history
         updated = storage.update_note(
             person_id="test_user",
@@ -43,7 +82,7 @@ def test_storage():
         assert updated.note == "Second visit test note."
         assert len(updated.history) >= 1
         assert updated.history[0]["transcript"] == "Hello there friend"
-        print("  [OK] RosterStorage CRUD and visit history passed.")
+        print("  [OK] RosterStorage CRUD, encoding storage, and visit history passed.")
 
 def test_api_endpoints():
     print("Testing FastAPI endpoints...")
@@ -75,7 +114,12 @@ def test_api_endpoints():
     assert res.json()["person"]["name"] == "Anna Jenkins"
     print("  [OK] POST /api/roster profile creation passed.")
 
-    # 4. POST /api/update_note
+    # 4. POST /api/clear_encodings
+    res = client.post("/api/clear_encodings/grandma_anna")
+    assert res.status_code == 200
+    print("  [OK] POST /api/clear_encodings passed.")
+
+    # 5. POST /api/update_note
     res = client.post("/api/update_note", json={
         "person_id": "grandma_anna",
         "note": "Anna and you watered the balcony sunflowers together.",
@@ -85,7 +129,7 @@ def test_api_endpoints():
     assert "balcony sunflowers" in res.json()["person"]["note"]
     print("  [OK] POST /api/update_note memory persistence passed.")
 
-    # 5. POST /api/simulate
+    # 6. POST /api/simulate
     res = client.post("/api/simulate", json={"action": "arrive", "person_id": "priya"})
     assert res.status_code == 200
     assert res.json()["success"] is True
@@ -97,6 +141,7 @@ def test_api_endpoints():
 
 if __name__ == "__main__":
     print("\n--- Running Anchor Integration Test Suite ---")
+    test_biometrics()
     test_storage()
     test_api_endpoints()
     print("\nAll Anchor Integration Tests Passed Successfully!")

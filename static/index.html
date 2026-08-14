@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/patient-view-dist/assets/style.css" />
 </head>
 <body>
 
@@ -43,55 +44,11 @@
          VIEW 1: PATIENT COMPANION DISPLAY
          ==================================================================== -->
     <section class="patient-view" id="viewPatient">
-      
-      <!-- 1. Ambient Standby (When No One is in Frame) -->
-      <div class="ambient-screen" id="ambientScreen">
-        <div class="ambient-clock" id="ambientClock">12:00 PM</div>
-        <div class="ambient-date" id="ambientDate">Tuesday, August 14</div>
-        
-        <div class="ambient-comfort-card">
-          <div class="ambient-comfort-title">You are home, safe and loved.</div>
-          <div class="ambient-comfort-subtitle">Anchor is keeping watch. When a loved one walks in, we'll remind you who they are.</div>
-        </div>
 
-        <div style="font-size: 13px; font-weight: 600; color: var(--text-light); margin-bottom: 10px;">RECENT VISITS</div>
-        <div class="ambient-recent-row" id="ambientRecentList">
-          <!-- Populated dynamically -->
-        </div>
-      </div>
-
-      <!-- 2. Active Visitor Screen (When Recognized) -->
-      <div class="visitor-screen hidden" id="visitorScreen">
-        <div class="visitor-header">
-          <div class="visitor-avatar-large" id="visitorAvatar">P</div>
-          <div class="visitor-meta">
-            <h2 id="visitorName">Priya Patel</h2>
-            <div class="relationship-badge" id="visitorRelationship">Your Daughter 🌿</div>
-          </div>
-        </div>
-
-        <div class="memory-anchor-card">
-          <div class="memory-header-row">
-            <span>✨ Last Visit Memory</span>
-          </div>
-          <div class="memory-text" id="visitorMemoryNote">
-            "Priya brought over fresh chamomile tea and you looked through photos from the lake house together."
-          </div>
-        </div>
-
-        <div class="listening-indicator-row">
-          <div class="listening-left">
-            <div class="soundwave-anim">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <div>
-              <div class="listening-text">Anchor is listening with care</div>
-              <div class="listening-subtext" id="listeningSubtext">Capturing your conversation to remember for next time.</div>
-            </div>
-          </div>
-          <button class="btn btn-secondary" id="btnManualEndVisit">Finish Visit</button>
-        </div>
-      </div>
+      <!-- Patient-facing display — rendered by the React PatientView component
+           (patient_view/src/PatientView.jsx). Driven entirely by the recognition
+           system via window.AnchorPatientView.setPerson(person | null). -->
+      <div id="patientViewRoot" class="patient-view-root"></div>
 
     </section>
 
@@ -245,6 +202,7 @@
   </div>
 
   <!-- Scripts -->
+  <script type="module" src="/static/patient-view-dist/bootstrap.js"></script>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ anchor_face.service
 
 Background worker and coordinator for Anchor's real-time face recognition.
 Bridges MediaPipe FaceRecognizer events with asynchronous WebSocket broadcasts,
-manages camera lifecycle, and handles interactive face registration.
+manages camera lifecycle, renders live visual overlays, and handles interactive face registration.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import cv2
 import numpy as np
@@ -25,10 +25,40 @@ from .recognizer import (
     PersonRecord,
     compute_encoding,
     _MODEL_PATH,
+    DetectionResult,
 )
 from .storage import PersonProfile, RosterStorage
 
 logger = logging.getLogger(__name__)
+
+
+def _draw_rounded_rect(
+    img: np.ndarray,
+    top_left: Tuple[int, int],
+    bottom_right: Tuple[int, int],
+    color: Tuple[int, int, int],
+    thickness: int = 2,
+    radius: int = 12,
+) -> None:
+    """Draw a smooth rounded rectangle on an image."""
+    x1, y1 = top_left
+    x2, y2 = bottom_right
+    r = min(radius, (x2 - x1) // 2, (y2 - y1) // 2)
+
+    # Top left corner
+    cv2.ellipse(img, (x1 + r, y1 + r), (r, r), 180, 0, 90, color, thickness)
+    # Top right corner
+    cv2.ellipse(img, (x2 - r, y1 + r), (r, r), 270, 0, 90, color, thickness)
+    # Bottom right corner
+    cv2.ellipse(img, (x2 - r, y2 - r), (r, r), 0, 0, 90, color, thickness)
+    # Bottom left corner
+    cv2.ellipse(img, (x1 + r, y2 - r), (r, r), 90, 0, 90, color, thickness)
+
+    # Connecting straight lines
+    cv2.line(img, (x1 + r, y1), (x2 - r, y1), color, thickness)
+    cv2.line(img, (x1 + r, y2), (x2 - r, y2), color, thickness)
+    cv2.line(img, (x1, y1 + r), (x1, y2 - r), color, thickness)
+    cv2.line(img, (x2, y1 + r), (x2, y2 - r), color, thickness)
 
 
 class RecognitionService:
@@ -38,8 +68,8 @@ class RecognitionService:
         self,
         storage: Optional[RosterStorage] = None,
         camera_index: int = 0,
-        tolerance: float = 0.45,
-        scan_interval_sec: float = 0.4,
+        tolerance: float = 0.38,
+        scan_interval_sec: float = 0.35,
     ):
         self.storage = storage or RosterStorage()
         self.camera_index = camera_index
@@ -50,13 +80,6 @@ class RecognitionService:
         self._thread: Optional[threading.Thread] = None
         self._running: bool = False
         self._camera_available: bool = False
-        self._last_status: Dict[str, Any] = {
-            "active": False,
-            "camera_available": False,
-            "current_person": None,
-            "roster_count": len(self.storage.list_profiles()),
-            "last_seen_time": None,
-        }
 
         # WebSocket subscriber queues
         self._subscribers: Set[asyncio.Queue] = set()
@@ -74,7 +97,6 @@ class RecognitionService:
         q: asyncio.Queue = asyncio.Queue()
         with self._lock:
             self._subscribers.add(q)
-        # Send current status immediately
         q.put_nowait({"type": "status", "data": self.get_status()})
         return q
 
@@ -142,12 +164,7 @@ class RecognitionService:
             return
         records = self.storage.get_person_records()
         self._recognizer._roster = records
-        self._recognizer._known_encodings = []
-        self._recognizer._known_ids = []
-        for person in records:
-            for enc in person.encodings:
-                self._recognizer._known_encodings.append(enc)
-                self._recognizer._known_ids.append(person.person_id)
+        self._recognizer._rebuild_lookup()
         logger.info("Reloaded recognizer roster (%d encodings total).", len(self._recognizer._known_encodings))
 
     def start(self) -> None:
@@ -239,7 +256,7 @@ class RecognitionService:
             while self._running:
                 ret, frame = cap.read()
                 if not ret:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                     continue
 
                 with self._frame_lock:
@@ -247,11 +264,11 @@ class RecognitionService:
 
                 now = time.monotonic()
                 if now - last_scan_time < self.scan_interval_sec:
-                    time.sleep(0.05)
+                    time.sleep(0.03)
                     continue
                 last_scan_time = now
 
-                # Run detection & update state
+                # Run detection & update debounce state
                 match_id = self._recognizer._process_frame(frame)
                 self._recognizer._update_state(match_id)
 
@@ -272,12 +289,11 @@ class RecognitionService:
     # -----------------------------------------------------------------------
 
     def capture_and_register_face(self, person_id: str, image_base64: Optional[str] = None) -> Dict[str, Any]:
-        """Compute face encoding from either uploaded image or current live frame."""
+        """Compute biometric face encoding from either uploaded image or current live frame."""
         frame: Optional[np.ndarray] = None
 
         if image_base64:
             try:
-                # Strip data URL prefix if present
                 if "," in image_base64:
                     image_base64 = image_base64.split(",", 1)[1]
                 img_bytes = base64.b64decode(image_base64)
@@ -291,9 +307,9 @@ class RecognitionService:
                     frame = self._latest_bgr_frame.copy()
 
         if frame is None:
-            return {"success": False, "error": "No camera frame or image provided"}
+            return {"success": False, "error": "No camera frame or image provided. Ensure webcam is connected or upload a photo."}
 
-        # Need a temporary landmarker if recognizer is not running
+        # Use temporary landmarker if recognizer is not running
         from mediapipe.tasks.python import BaseOptions
         from mediapipe.tasks.python.vision import (
             FaceLandmarker,
@@ -305,6 +321,7 @@ class RecognitionService:
             base_options=BaseOptions(model_asset_path=_MODEL_PATH),
             running_mode=RunningMode.IMAGE,
             num_faces=1,
+            min_face_detection_confidence=0.4,
         )
         landmarker = FaceLandmarker.create_from_options(options)
         try:
@@ -313,97 +330,108 @@ class RecognitionService:
             landmarker.close()
 
         if encoding is None:
-            return {"success": False, "error": "No face detected. Please ensure clear lighting and face the camera directly."}
+            return {
+                "success": False,
+                "error": "No face detected in snapshot. Please ensure good lighting and face the camera directly.",
+            }
 
         added = self.storage.add_encoding(person_id, encoding)
         if added:
             self.reload_roster()
-            return {"success": True, "message": f"Successfully registered face encoding for {person_id}."}
+            profile = self.storage.get_profile(person_id)
+            count = len(profile.encodings) if profile else 1
+            return {
+                "success": True,
+                "encodings_count": count,
+                "message": f"Successfully enrolled face snapshot for {profile.name if profile else person_id} ({count} total).",
+            }
         return {"success": False, "error": f"Person '{person_id}' not found in roster."}
 
-    def get_latest_frame_jpeg(self) -> Optional[bytes]:
-        """Return the latest camera frame encoded as JPEG bytes for web streaming."""
+    def get_latest_frame_jpeg(self) -> bytes:
+        """Return the latest camera frame encoded as JPEG with visual face bounding boxes."""
         with self._frame_lock:
             if self._latest_bgr_frame is not None:
                 frame = self._latest_bgr_frame.copy()
             else:
-                frame = None
-
-        if frame is None:
-            # Generate an informative standby canvas so the browser stream never hangs
-            standby = np.zeros((480, 640, 3), dtype=np.uint8)
-            standby[:] = (26, 32, 28)  # Deep calm dark green/slate
-            
-            # Draw subtle grid/frame border
-            cv2.rectangle(standby, (10, 10), (630, 470), (45, 60, 50), 1)
-            
-            # Status text
-            cv2.putText(
-                standby,
-                "ANCHOR REAL-TIME VISION",
-                (180, 210),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.65,
-                (140, 190, 155),
-                2,
-                cv2.LINE_AA,
-            )
-            
-            if self._recognizer and self._recognizer.confirmed_person:
-                p_id = self._recognizer.confirmed_person
-                p = self.storage.get_profile(p_id)
-                name = p.name if p else p_id.capitalize()
+                # Standby canvas when camera is initializing
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                frame[:] = (28, 38, 32)
                 cv2.putText(
-                    standby,
-                    f"Visitor Detected: {name}",
-                    (195, 255),
+                    frame,
+                    "Anchor Live Vision • Starting Camera...",
+                    (110, 240),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (80, 220, 120),
+                    0.65,
+                    (200, 230, 215),
                     2,
                     cv2.LINE_AA,
                 )
+
+        h, w = frame.shape[:2]
+
+        # Draw real-time detection overlay
+        det: Optional[DetectionResult] = (
+            self._recognizer.last_detection if self._recognizer else None
+        )
+
+        if det and det.bbox:
+            xmin, ymin, xmax, ymax = det.bbox
+            
+            # Determine color & label based on recognition status
+            if det.matched_person_id:
+                profile = self.storage.get_profile(det.matched_person_id)
+                name = profile.name if profile else det.matched_person_id
+                pct = int(det.confidence * 100)
+                label = f"{name} ({pct}% Match)"
+                box_color = (60, 190, 80)      # Rich emerald green (BGR)
+                badge_bg = (30, 120, 50)
             else:
-                cv2.putText(
-                    standby,
-                    "Camera Standby / Simulation Mode Active",
-                    (150, 250),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (160, 170, 165),
-                    1,
-                    cv2.LINE_AA,
-                )
-                cv2.putText(
-                    standby,
-                    "Simulate visits or connect webcam to view live feed",
-                    (135, 280),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.42,
-                    (110, 125, 120),
-                    1,
-                    cv2.LINE_AA,
-                )
+                if len(self.storage.list_profiles()) == 0 or len(self._recognizer._known_encodings) == 0:
+                    label = "Face Detected (0 Roster Enrolled)"
+                else:
+                    label = "Visitor (Unregistered)"
+                box_color = (40, 160, 240)     # Warm amber/orange (BGR)
+                badge_bg = (20, 100, 180)
 
-            ret, jpeg = cv2.imencode(".jpg", standby, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-            return jpeg.tobytes() if ret else None
+            # Draw rounded bounding box
+            _draw_rounded_rect(frame, (xmin, ymin), (xmax, ymax), box_color, thickness=2, radius=14)
 
-        # Add recognition indicator overlay
-        if self._recognizer and self._recognizer.confirmed_person:
-            person = self.storage.get_profile(self._recognizer.confirmed_person)
-            name = person.name if person else self._recognizer.confirmed_person
+            # Draw subtle keypoints
+            for kx, ky in det.keypoints:
+                cv2.circle(frame, (kx, ky), 3, box_color, -1, cv2.LINE_AA)
+
+            # Draw label badge
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.55
+            thickness = 1
+            (text_w, text_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
+            
+            label_ymin = max(ymin - 32, 10)
+            cv2.rectangle(
+                frame,
+                (xmin, label_ymin),
+                (xmin + text_w + 16, label_ymin + text_h + 14),
+                badge_bg,
+                -1,
+            )
             cv2.putText(
                 frame,
-                f"Recognized: {name}",
-                (20, 45),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
-                (0, 220, 100),
-                2,
+                label,
+                (xmin + 8, label_ymin + text_h + 6),
+                font,
+                font_scale,
+                (255, 255, 255),
+                thickness,
                 cv2.LINE_AA,
             )
 
-        ret, jpeg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+        # Draw Anchor status bar at bottom
+        cv2.rectangle(frame, (0, h - 30), (w, h), (18, 28, 22), -1)
+        enrolled_count = len(self._recognizer._known_encodings) if self._recognizer else 0
+        status_text = f"Anchor Live Vision • {enrolled_count} Face Encodings Enrolled"
+        cv2.putText(frame, status_text, (16, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 200, 180), 1, cv2.LINE_AA)
+
+        ret, jpeg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
         if ret:
             return jpeg.tobytes()
         return None
@@ -413,11 +441,9 @@ class RecognitionService:
     # -----------------------------------------------------------------------
 
     def simulate_recognized(self, person_id: str) -> None:
-        """Simulate person arrival for testing/demo without webcam."""
         logger.info("Simulating arrival for: %s", person_id)
         self._on_recognized(person_id)
 
     def simulate_unrecognized(self) -> None:
-        """Simulate person departure for testing/demo without webcam."""
         logger.info("Simulating departure.")
         self._on_unrecognized()
