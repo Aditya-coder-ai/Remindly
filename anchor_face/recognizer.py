@@ -273,7 +273,10 @@ class FaceRecognizer:
         )
         self._landmarker = FaceLandmarker.create_from_options(options)
 
-        cap = cv2.VideoCapture(self.camera_index)
+        cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap = cv2.VideoCapture(self.camera_index)
+
         if not cap.isOpened():
             raise RuntimeError(
                 f"Cannot open camera (index {self.camera_index}). "

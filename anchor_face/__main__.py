@@ -154,7 +154,9 @@ def main() -> None:
     landmarker = FaceLandmarker.create_from_options(options)
 
     # Open the camera once for registration snapshots.
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    if not cap.isOpened():
+        cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("!! Cannot open the default camera (index 0).")
         print("   Make sure a webcam is connected and not locked by another app.")

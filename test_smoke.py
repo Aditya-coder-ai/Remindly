@@ -1,6 +1,24 @@
 """Smoke test: verify MediaPipe FaceLandmarker loads, camera opens,
 and a frame can be processed without error."""
 
+import os
+import sys
+
+# Suppress noisy C++ logging from MediaPipe / TensorFlow Lite that writes
+# to stderr.  PowerShell treats ANY stderr output from a native process as
+# NativeCommandError (exit-code 1), so we silence it before the imports.
+os.environ["GLOG_minloglevel"] = "3"          # suppress Google C++ logs
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"      # suppress TF Lite info/warn
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"      # avoid GPU-probe warnings
+
+# The MediaPipe C++ layer writes directly to the C-level stderr file
+# descriptor, bypassing Python entirely.  Redirect fd 2 to devnull so
+# PowerShell never sees those writes.
+_stderr_fd = os.dup(2)
+_devnull = os.open(os.devnull, os.O_WRONLY)
+os.dup2(_devnull, 2)
+os.close(_devnull)
+
 import cv2
 import numpy as np
 from anchor_face.recognizer import (
@@ -16,7 +34,7 @@ from mediapipe.tasks.python.vision import (
     RunningMode,
 )
 
-print(f"1. Model path exists: {__import__('os').path.exists(_MODEL_PATH)}")
+print(f"1. Model path exists: {os.path.exists(_MODEL_PATH)}")
 
 # Load the landmarker
 options = FaceLandmarkerOptions(
@@ -25,6 +43,11 @@ options = FaceLandmarkerOptions(
     num_faces=1,
 )
 landmarker = FaceLandmarker.create_from_options(options)
+
+# Restore stderr now that the noisy C++ init is done.
+os.dup2(_stderr_fd, 2)
+os.close(_stderr_fd)
+
 print("2. FaceLandmarker created OK")
 
 # Open camera, grab one frame
@@ -54,3 +77,4 @@ print(f"5. FaceRecognizer constructed: tolerance={recognizer.tolerance}, "
 
 landmarker.close()
 print("\nAll smoke tests passed!")
+sys.exit(0)

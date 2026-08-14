@@ -1,0 +1,80 @@
+[
+  {
+    "person_id": "priya",
+    "name": "Priya Patel",
+    "relationship": "Daughter",
+    "avatar_color": "#2f6f4f",
+    "avatar_url": "",
+    "note": "Priya brought over fresh chamomile tea and you looked through photos from the lake house together.",
+    "last_visited": "August 14, 2026",
+    "history": [
+      {
+        "timestamp": 1786525525.0608974,
+        "date_str": "2 days ago",
+        "note": "Priya brought over fresh chamomile tea and you looked through photos from the lake house together.",
+        "transcript": "Hi Dad, I brought that tea you love, let's look at the old photo album."
+      },
+      {
+        "timestamp": 1786266325.0608983,
+        "date_str": "Last Sunday",
+        "note": "Priya watered the balcony tomatoes with you and talked about her new painting class.",
+        "transcript": "The garden looks lovely today Dad, the tomatoes are growing so fast."
+      }
+    ],
+    "encodings": []
+  },
+  {
+    "person_id": "tom",
+    "name": "Tom Evans",
+    "relationship": "Grandson",
+    "avatar_color": "#3b7a57",
+    "avatar_url": "",
+    "note": "Tom showed you his new bicycle and told you about his soccer game on Saturday.",
+    "last_visited": "3 days ago",
+    "history": [
+      {
+        "timestamp": 1786439125.0609043,
+        "date_str": "3 days ago",
+        "note": "Tom showed you his new bicycle and told you about his soccer game on Saturday.",
+        "transcript": "Grandpa check out my new bike! We won our match 3 to 1 yesterday."
+      }
+    ],
+    "encodings": []
+  },
+  {
+    "person_id": "maya",
+    "name": "Maya Sharma",
+    "relationship": "Caregiver & Nurse",
+    "avatar_color": "#436b95",
+    "avatar_url": "",
+    "note": "Maya checked your morning vitals, shared a funny story about her cat, and made warm oatmeal.",
+    "last_visited": "This morning",
+    "history": [
+      {
+        "timestamp": 1786683925.0609071,
+        "date_str": "This morning",
+        "note": "Maya checked your morning vitals, shared a funny story about her cat, and made warm oatmeal.",
+        "transcript": "Good morning! Your blood pressure is great today. My cat Mittens tried to climb the bookshelf again."
+      }
+    ],
+    "encodings": []
+  },
+  {
+    "person_id": "grandma_anna",
+    "name": "Anna Jenkins",
+    "relationship": "Grandmother",
+    "avatar_color": "#2f6f4f",
+    "avatar_url": null,
+    "note": "Anna and you watered the balcony sunflowers together.",
+    "last_visited": "August 14, 2026, 02:35 PM",
+    "history": [
+      {
+        "timestamp": 1786698346.7078676,
+        "date_str": "August 14, 2026, 02:35 PM",
+        "note": "Anna and you watered the balcony sunflowers together.",
+        "transcript": "Let's water these lovely flowers today."
+      }
+    ],
+    "encodings": []
+  }
+]

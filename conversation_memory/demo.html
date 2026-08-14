@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anchor — Conversation Memory Demo</title>
+  <style>
+    :root {
+      --accent: #2f6f4f;
+      --bg: #f4f1ec;
+      --card: #ffffff;
+      --text: #2b2b2b;
+      --muted: #6b6b6b;
+      --border: #dcd6cc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 18px 24px;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+    main {
+      max-width: 860px;
+      margin: 24px auto;
+      padding: 0 16px 48px;
+      display: grid;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card h2 { margin: 0 0 10px; font-size: 15px; }
+    label { font-size: 13px; font-weight: 600; display: block; margin: 8px 0 4px; }
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+    button {
+      padding: 9px 14px;
+      border: none;
+      border-radius: 6px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+    }
+    button.secondary { background: #5b6670; }
+    button.ghost {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    #status {
+      font-size: 13px;
+      white-space: pre-wrap;
+      min-height: 18px;
+      color: var(--text);
+    }
+    #status .ok { color: var(--accent); }
+    #status .warn { color: #a15c00; }
+    .person-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fafaf8;
+    }
+    .person-card .who { font-weight: 700; font-size: 14px; }
+    .person-card .note {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #3d3d3d;
+      line-height: 1.45;
+      background: #fdf8ec;
+      border-left: 3px solid var(--accent);
+      padding: 8px 10px;
+      border-radius: 0 6px 6px 0;
+    }
+    .person-card .empty-note { color: var(--muted); font-style: italic; }
+    #peopleGrid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 640px) { #peopleGrid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Anchor — Conversation Memory Demo</h1>
+    <p>Simulates the recognition module's "person arrived" / "person left" events. No face recognition or camera used here.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Groq API key</h2>
+      <input
+        id="apiKey"
+        type="text"
+        autocomplete="off"
+        placeholder="gsk_…  (leave empty to test the fallback sentence)"
+      />
+      <p class="hint">
+        Pasted key stays in this page only. With no key, every summary falls back to a generic
+        "You had a visit with …" sentence so the demo never breaks. In production this call must
+        go through a backend proxy — see summarize.js.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Simulated visit</h2>
+      <label for="personSelect">Who is visiting?</label>
+      <select id="personSelect"></select>
+
+      <label for="typedText">Typed transcript (optional — paste/simulate speech)</label>
+      <textarea id="typedText" placeholder="e.g.  Priya showed me the photos from the lake house. We talked about the garden and had tea together."></textarea>
+
+      <div class="row">
+        <button id="btnAddTyped">Add typed text</button>
+        <button id="btnClearTranscript" class="ghost">Clear transcript</button>
+      </div>
+
+      <div class="row" style="border-top: 1px solid var(--border); padding-top: 12px;">
+        <button id="btnArrive">Person arrives (start listening)</button>
+        <button id="btnLeave">Person leaves (stop &amp; summarize)</button>
+        <button id="btnForce" class="secondary">Force summarize now</button>
+      </div>
+      <p class="hint">
+        "Person arrives" starts the browser microphone (Chrome over localhost/https). You can still
+        test the whole flow with typed text only — add a few lines, then press "Person leaves".
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <div id="status">Ready.</div>
+      <div class="hint" id="liveTranscript"></div>
+    </section>
+
+    <section class="card">
+      <h2>Memories (what the patient would hear)</h2>
+      <div id="peopleGrid"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { ConversationMemory } from "./conversation_memory.js";
+    import { ANCHOR_API_CONFIG } from "./summarize.js";
+
+    // In-memory person records — the recognition/patient-view modules pass
+    // the same objects in the real build.  No persistence in this module.
+    const people = {
+      priya: { person_id: "priya", name: "Priya", note: null },
+      tom: { person_id: "tom", name: "Tom", note: null },
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const statusEl = $("status");
+    const transcriptEl = $("liveTranscript");
+    const personSelect = $("personSelect");
+    const peopleGrid = $("peopleGrid");
+
+    Object.values(people).forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.person_id;
+      opt.textContent = p.name;
+      personSelect.appendChild(opt);
+    });
+
+    const memory = new ConversationMemory({
+      onStatus: (message) => {
+        statusEl.textContent = message;
+      },
+    });
+
+    $("apiKey").addEventListener("input", (e) => {
+      ANCHOR_API_CONFIG.apiKey = e.target.value.trim();
+      statusEl.textContent = ANCHOR_API_CONFIG.apiKey
+        ? "API key set — summaries will use Groq."
+        : "No API key — summaries will use the generic fallback sentence.";
+    });
+
+    function currentPerson() {
+      return people[personSelect.value] || people.priya;
+    }
+
+    function refresh() {
+      // Re-render person cards so person.note changes show immediately.
+      peopleGrid.innerHTML = "";
+      Object.values(people).forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "person-card";
+        const who = document.createElement("div");
+        who.className = "who";
+        who.textContent = p.name;
+        card.appendChild(who);
+        const note = document.createElement("div");
+        note.className = "note";
+        if (p.note) {
+          note.textContent = p.note;
+        } else {
+          note.classList.add("empty-note");
+          note.textContent = "(no memory yet)";
+        }
+        card.appendChild(note);
+        peopleGrid.appendChild(card);
+      });
+
+      const t = memory.getTranscript();
+      transcriptEl.textContent = t
+        ? `Live transcript (${memory.isCapturing ? "listening" : "captured"}): "${t}"`
+        : `Live transcript: (empty) — ${memory.isCapturing ? "listening" : "not capturing"}`;
+
+      $("btnArrive").disabled = memory.isCapturing;
+      $("btnLeave").disabled = !memory.isCapturing && !memory.getTranscript();
+      $("btnForce").disabled = !memory.getTranscript();
+    }
+
+    $("btnArrive").addEventListener("click", () => {
+      memory.startCapture({ name: currentPerson().name });
+      refresh();
+    });
+
+    $("btnLeave").addEventListener("click", async () => {
+      $("btnLeave").disabled = true;
+      await memory.stopCaptureAndSummarize(currentPerson());
+      refresh();
+    });
+
+    $("btnForce").addEventListener("click", async () => {
+      $("btnForce").disabled = true;
+      await memory.forceSummarizeNow(currentPerson());
+      refresh();
+    });
+
+    $("btnAddTyped").addEventListener("click", () => {
+      memory.appendTranscript($("typedText").value);
+      $("typedText").value = "";
+      refresh();
+    });
+
+    $("btnClearTranscript").addEventListener("click", () => {
+      memory.resetTranscript();
+      refresh();
+    });
+
+    personSelect.addEventListener("change", refresh);
+    refresh();
+  </script>
+</body>
+</html>
