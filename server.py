@@ -164,12 +164,22 @@ async def video_feed():
     async def frame_stream():
         while True:
             jpeg = recognition_service.get_latest_frame_jpeg()
-            if jpeg:
-                yield (b"--frame\r\n"
-                       b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
+            yield (b"--frame\r\n"
+                   b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
             await asyncio.sleep(0.06)
 
     return StreamingResponse(frame_stream(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.get("/camera_snapshot")
+async def camera_snapshot():
+    """Return a single live JPEG snapshot from the webcam stream."""
+    jpeg = recognition_service.get_latest_frame_jpeg()
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"},
+    )
 
 
 @app.get("/api/roster")

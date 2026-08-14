@@ -337,12 +337,25 @@ class RecognitionService:
             }
         return {"success": False, "error": f"Person '{person_id}' not found in roster."}
 
-    def get_latest_frame_jpeg(self) -> Optional[bytes]:
+    def get_latest_frame_jpeg(self) -> bytes:
         """Return the latest camera frame encoded as JPEG with visual face bounding boxes."""
         with self._frame_lock:
-            if self._latest_bgr_frame is None:
-                return None
-            frame = self._latest_bgr_frame.copy()
+            if self._latest_bgr_frame is not None:
+                frame = self._latest_bgr_frame.copy()
+            else:
+                # Standby canvas when camera is initializing
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                frame[:] = (28, 38, 32)
+                cv2.putText(
+                    frame,
+                    "Anchor Live Vision • Starting Camera...",
+                    (110, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.65,
+                    (200, 230, 215),
+                    2,
+                    cv2.LINE_AA,
+                )
 
         h, w = frame.shape[:2]
 
