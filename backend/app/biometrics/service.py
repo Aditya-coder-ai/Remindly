@@ -1,10 +1,10 @@
 """
-anchor_face.service
-===================
+backend.app.biometrics.service
+==============================
 
 Background worker and coordinator for Anchor's real-time face recognition.
 Bridges MediaPipe FaceRecognizer events with asynchronous WebSocket broadcasts,
-manages camera lifecycle, renders live visual overlays, and handles interactive face registration.
+manages camera lifecycle, renders live visual overlays, and handles face registration.
 """
 
 from __future__ import annotations
@@ -15,19 +15,25 @@ import logging
 import os
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 import cv2
 import numpy as np
 
+from ..config import (
+    DEFAULT_ENTER_STREAK,
+    DEFAULT_EXIT_STREAK,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_TOLERANCE,
+    MODEL_PATH,
+)
+from ..storage.roster_storage import PersonProfile, RosterStorage
 from .recognizer import (
+    DetectionResult,
     FaceRecognizer,
     PersonRecord,
     compute_encoding,
-    _MODEL_PATH,
-    DetectionResult,
 )
-from .storage import PersonProfile, RosterStorage
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +49,13 @@ def _draw_rounded_rect(
     """Draw a smooth rounded rectangle on an image."""
     x1, y1 = top_left
     x2, y2 = bottom_right
-    r = min(radius, (x2 - x1) // 2, (y2 - y1) // 2)
+    r = min(radius, max(1, (x2 - x1) // 2), max(1, (y2 - y1) // 2))
 
-    # Top left corner
     cv2.ellipse(img, (x1 + r, y1 + r), (r, r), 180, 0, 90, color, thickness)
-    # Top right corner
     cv2.ellipse(img, (x2 - r, y1 + r), (r, r), 270, 0, 90, color, thickness)
-    # Bottom right corner
     cv2.ellipse(img, (x2 - r, y2 - r), (r, r), 0, 0, 90, color, thickness)
-    # Bottom left corner
     cv2.ellipse(img, (x1 + r, y2 - r), (r, r), 90, 0, 90, color, thickness)
 
-    # Connecting straight lines
     cv2.line(img, (x1 + r, y1), (x2 - r, y1), color, thickness)
     cv2.line(img, (x1 + r, y2), (x2 - r, y2), color, thickness)
     cv2.line(img, (x1, y1 + r), (x1, y2 - r), color, thickness)
@@ -68,8 +69,8 @@ class RecognitionService:
         self,
         storage: Optional[RosterStorage] = None,
         camera_index: int = 0,
-        tolerance: float = 0.38,
-        scan_interval_sec: float = 0.35,
+        tolerance: float = DEFAULT_TOLERANCE,
+        scan_interval_sec: float = DEFAULT_SCAN_INTERVAL,
     ):
         self.storage = storage or RosterStorage()
         self.camera_index = camera_index
@@ -81,12 +82,10 @@ class RecognitionService:
         self._running: bool = False
         self._camera_available: bool = False
 
-        # WebSocket subscriber queues
         self._subscribers: Set[asyncio.Queue] = set()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._lock = threading.Lock()
 
-        # Shared frame for face registration snapshots
         self._latest_bgr_frame: Optional[np.ndarray] = None
         self._frame_lock = threading.Lock()
 
@@ -129,10 +128,6 @@ class RecognitionService:
             "timestamp": time.time(),
         }
 
-    # -----------------------------------------------------------------------
-    # Recognition Callbacks
-    # -----------------------------------------------------------------------
-
     def _on_recognized(self, person_id: str) -> None:
         profile = self.storage.get_profile(person_id)
         person_data = (
@@ -154,21 +149,22 @@ class RecognitionService:
             "timestamp": time.time(),
         })
 
-    # -----------------------------------------------------------------------
-    # Lifecycle
-    # -----------------------------------------------------------------------
-
     def reload_roster(self) -> None:
         """Update recognizer roster with newest encodings from storage."""
         if not self._recognizer:
             return
-        records = self.storage.get_person_records()
+        records = [
+            PersonRecord(
+                person_id=p.person_id,
+                encodings=[np.array(e, dtype=np.float64) for e in p.encodings if len(e) > 0],
+            )
+            for p in self.storage._profiles.values()
+        ]
         self._recognizer._roster = records
         self._recognizer._rebuild_lookup()
         logger.info("Reloaded recognizer roster (%d encodings total).", len(self._recognizer._known_encodings))
 
     def start(self) -> None:
-        """Start the recognition loop in a dedicated background worker."""
         if self._running:
             return
 
@@ -187,14 +183,20 @@ class RecognitionService:
         logger.info("Recognition service stopped.")
 
     def _run_loop(self) -> None:
-        """Worker thread loop managing camera and recognizer."""
-        roster_records = self.storage.get_person_records()
+        records = [
+            PersonRecord(
+                person_id=p.person_id,
+                encodings=[np.array(e, dtype=np.float64) for e in p.encodings if len(e) > 0],
+            )
+            for p in self.storage._profiles.values()
+        ]
 
         self._recognizer = FaceRecognizer(
-            roster=roster_records,
+            roster=records,
             tolerance=self.tolerance,
-            enter_streak=2,
-            exit_streak=3,
+            enter_streak=DEFAULT_ENTER_STREAK,
+            exit_streak=DEFAULT_EXIT_STREAK,
+            margin_threshold=0.025,
             scan_interval_sec=self.scan_interval_sec,
             frame_scale=0.5,
             camera_index=self.camera_index,
@@ -203,6 +205,7 @@ class RecognitionService:
         )
 
         try:
+<<<<<<< HEAD:anchor_face/service.py
             # Ensure model file exists (auto-download if missing)
             if not os.path.exists(_MODEL_PATH):
                 logger.info("FaceLandmarker model not found at %s. Downloading...", _MODEL_PATH)
@@ -218,6 +221,13 @@ class RecognitionService:
                     self._camera_available = False
                     self.broadcast_event({"type": "status", "data": self.get_status()})
                     return
+=======
+            if not os.path.exists(MODEL_PATH):
+                logger.error("FaceLandmarker model not found at %s", MODEL_PATH)
+                self._camera_available = False
+                self.broadcast_event({"type": "status", "data": self.get_status()})
+                return
+>>>>>>> 42d2f6f (refactor: restructure into dedicated frontend and backend modules with security isolation):backend/app/biometrics/service.py
 
             from mediapipe.tasks.python import BaseOptions
             from mediapipe.tasks.python.vision import (
@@ -227,7 +237,7 @@ class RecognitionService:
             )
 
             options = FaceLandmarkerOptions(
-                base_options=BaseOptions(model_asset_path=_MODEL_PATH),
+                base_options=BaseOptions(model_asset_path=MODEL_PATH),
                 running_mode=RunningMode.IMAGE,
                 num_faces=1,
                 min_face_detection_confidence=0.5,
@@ -268,7 +278,6 @@ class RecognitionService:
                     continue
                 last_scan_time = now
 
-                # Run detection & update debounce state
                 match_id = self._recognizer._process_frame(frame)
                 self._recognizer._update_state(match_id)
 
@@ -284,12 +293,8 @@ class RecognitionService:
             self._running = False
             self.broadcast_event({"type": "status", "data": self.get_status()})
 
-    # -----------------------------------------------------------------------
-    # Registration & Snapshots
-    # -----------------------------------------------------------------------
-
     def capture_and_register_face(self, person_id: str, image_base64: Optional[str] = None) -> Dict[str, Any]:
-        """Compute biometric face encoding from either uploaded image or current live frame."""
+        """Compute biometric face encoding from image or current live camera frame."""
         frame: Optional[np.ndarray] = None
 
         if image_base64:
@@ -309,7 +314,6 @@ class RecognitionService:
         if frame is None:
             return {"success": False, "error": "No camera frame or image provided. Ensure webcam is connected or upload a photo."}
 
-        # Use temporary landmarker if recognizer is not running
         from mediapipe.tasks.python import BaseOptions
         from mediapipe.tasks.python.vision import (
             FaceLandmarker,
@@ -318,7 +322,7 @@ class RecognitionService:
         )
 
         options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=_MODEL_PATH),
+            base_options=BaseOptions(model_asset_path=MODEL_PATH),
             running_mode=RunningMode.IMAGE,
             num_faces=1,
             min_face_detection_confidence=0.4,
@@ -353,7 +357,6 @@ class RecognitionService:
             if self._latest_bgr_frame is not None:
                 frame = self._latest_bgr_frame.copy()
             else:
-                # Standby canvas when camera is initializing
                 frame = np.zeros((480, 640, 3), dtype=np.uint8)
                 frame[:] = (28, 38, 32)
                 cv2.putText(
@@ -369,7 +372,6 @@ class RecognitionService:
 
         h, w = frame.shape[:2]
 
-        # Draw real-time detection overlay
         det: Optional[DetectionResult] = (
             self._recognizer.last_detection if self._recognizer else None
         )
@@ -377,30 +379,26 @@ class RecognitionService:
         if det and det.bbox:
             xmin, ymin, xmax, ymax = det.bbox
             
-            # Determine color & label based on recognition status
             if det.matched_person_id:
                 profile = self.storage.get_profile(det.matched_person_id)
                 name = profile.name if profile else det.matched_person_id
                 pct = int(det.confidence * 100)
                 label = f"{name} ({pct}% Match)"
-                box_color = (60, 190, 80)      # Rich emerald green (BGR)
+                box_color = (60, 190, 80)
                 badge_bg = (30, 120, 50)
             else:
                 if len(self.storage.list_profiles()) == 0 or len(self._recognizer._known_encodings) == 0:
                     label = "Face Detected (0 Roster Enrolled)"
                 else:
                     label = "Visitor (Unregistered)"
-                box_color = (40, 160, 240)     # Warm amber/orange (BGR)
+                box_color = (40, 160, 240)
                 badge_bg = (20, 100, 180)
 
-            # Draw rounded bounding box
             _draw_rounded_rect(frame, (xmin, ymin), (xmax, ymax), box_color, thickness=2, radius=14)
 
-            # Draw subtle keypoints
             for kx, ky in det.keypoints:
                 cv2.circle(frame, (kx, ky), 3, box_color, -1, cv2.LINE_AA)
 
-            # Draw label badge
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.55
             thickness = 1
@@ -425,7 +423,6 @@ class RecognitionService:
                 cv2.LINE_AA,
             )
 
-        # Draw Anchor status bar at bottom
         cv2.rectangle(frame, (0, h - 30), (w, h), (18, 28, 22), -1)
         enrolled_count = len(self._recognizer._known_encodings) if self._recognizer else 0
         status_text = f"Anchor Live Vision • {enrolled_count} Face Encodings Enrolled"
@@ -435,10 +432,6 @@ class RecognitionService:
         if ret:
             return jpeg.tobytes()
         return None
-
-    # -----------------------------------------------------------------------
-    # Simulation & Test Hooks
-    # -----------------------------------------------------------------------
 
     def simulate_recognized(self, person_id: str) -> None:
         logger.info("Simulating arrival for: %s", person_id)

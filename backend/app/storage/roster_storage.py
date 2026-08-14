@@ -1,9 +1,9 @@
 """
-anchor_face.storage
-===================
+backend.app.storage.roster_storage
+==================================
 
 Persistent storage and profile management for Anchor loved ones.
-Stores people profiles, relationship badges, latest memory notes,
+Stores profiles, relationship badges, latest memory notes,
 visit histories, and face encodings in a local JSON database.
 """
 
@@ -11,19 +11,15 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from .recognizer import PersonRecord
+from ..config import DATA_DIR, ROSTER_FILE
 
 logger = logging.getLogger(__name__)
-
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-ROSTER_FILE = DATA_DIR / "roster.json"
 
 
 @dataclass
@@ -71,10 +67,6 @@ class PersonProfile:
             "history": self.history,
             "encodings": self.encodings,
         }
-
-    def to_person_record(self) -> PersonRecord:
-        np_encodings = [np.array(e, dtype=np.float64) for e in self.encodings if len(e) > 0]
-        return PersonRecord(person_id=self.person_id, encodings=np_encodings)
 
 
 def _get_seed_profiles() -> List[PersonProfile]:
@@ -152,7 +144,7 @@ class RosterStorage:
         self._load()
 
     def _load(self) -> None:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.file_path.exists():
             logger.info("Initializing roster store with seed profiles at %s", self.file_path)
             for p in _get_seed_profiles():
@@ -186,7 +178,7 @@ class RosterStorage:
 
     def _save(self) -> None:
         try:
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            self.file_path.parent.mkdir(parents=True, exist_ok=True)
             data = [p.to_full_dict() for p in self._profiles.values()]
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -198,9 +190,6 @@ class RosterStorage:
 
     def get_profile(self, person_id: str) -> Optional[PersonProfile]:
         return self._profiles.get(person_id)
-
-    def get_person_records(self) -> List[PersonRecord]:
-        return [p.to_person_record() for p in self._profiles.values()]
 
     def upsert_profile(
         self,

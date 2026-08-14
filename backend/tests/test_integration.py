@@ -1,6 +1,6 @@
 """
-Integration & System Test for Anchor
-Verifies storage, service lifecycle, biometric recognition, and API endpoints.
+Integration & System Test for Anchor Backend
+Verifies storage, biometric recognition, and API endpoints.
 """
 
 import json
@@ -12,34 +12,34 @@ import numpy as np
 
 from fastapi.testclient import TestClient
 
-from anchor_face.storage import RosterStorage
-from anchor_face.service import RecognitionService
-from anchor_face.recognizer import (
+from backend.app.storage.roster_storage import RosterStorage
+from backend.app.biometrics.service import RecognitionService
+from backend.app.biometrics.recognizer import (
     FaceRecognizer,
     PersonRecord,
     encoding_distance,
     calculate_confidence,
 )
-from server import app
+from backend.app.main import app
+
 
 def test_biometrics():
     print("Testing Biometric Math & Alignment...")
-    # Create two synthetic unit encodings
-    v1 = np.random.randn(220)
+    v1 = np.random.randn(206)
     v1 /= np.linalg.norm(v1)
     
     v2 = v1.copy()
     assert encoding_distance(v1, v2) == 0.0
     assert calculate_confidence(0.0) == 1.0
 
-    # Slight perturbation (same person across frames)
-    v3 = v1 + np.random.randn(220) * 0.01
+    v3 = v1 + np.random.randn(206) * 0.005
     v3 /= np.linalg.norm(v3)
     dist = encoding_distance(v1, v3)
-    assert dist < 0.25, f"Expected small distance, got {dist}"
-    conf = calculate_confidence(dist, tolerance=0.38)
-    assert conf > 0.6, f"Expected high confidence, got {conf}"
+    assert dist < 0.20, f"Expected small distance, got {dist}"
+    conf = calculate_confidence(dist, tolerance=0.22)
+    assert conf > 0.65, f"Expected high confidence, got {conf}"
     print(f"  [OK] Biometric vector matching passed (perturbed dist={dist:.3f}, conf={conf:.1%}).")
+
 
 def test_storage():
     print("Testing RosterStorage...")
@@ -47,11 +47,9 @@ def test_storage():
         roster_path = Path(tmpdir) / "test_roster.json"
         storage = RosterStorage(file_path=roster_path)
         
-        # Check seed profiles
         profiles = storage.list_profiles()
         assert len(profiles) >= 2, f"Expected at least 2 seed profiles, got {len(profiles)}"
         
-        # Test upsert
         p = storage.upsert_profile(
             person_id="test_user",
             name="Test User",
@@ -60,8 +58,7 @@ def test_storage():
         )
         assert p.name == "Test User"
         
-        # Test add encoding & clear encodings
-        dummy_enc = np.random.randn(220)
+        dummy_enc = np.random.randn(206)
         dummy_enc /= np.linalg.norm(dummy_enc)
         added = storage.add_encoding("test_user", dummy_enc)
         assert added is True
@@ -73,7 +70,6 @@ def test_storage():
         p_cleared = storage.get_profile("test_user")
         assert len(p_cleared.encodings) == 0
 
-        # Test update note & history
         updated = storage.update_note(
             person_id="test_user",
             note="Second visit test note.",
@@ -83,6 +79,7 @@ def test_storage():
         assert len(updated.history) >= 1
         assert updated.history[0]["transcript"] == "Hello there friend"
         print("  [OK] RosterStorage CRUD, encoding storage, and visit history passed.")
+
 
 def test_api_endpoints():
     print("Testing FastAPI endpoints...")
@@ -139,9 +136,78 @@ def test_api_endpoints():
     assert res.json()["success"] is True
     print("  [OK] POST /api/simulate visit simulation passed.")
 
+
+def test_groq_proxy_privacy_enforcement():
+    print("Testing Groq proxy privacy enforcement...")
+    from unittest.mock import patch
+
+    client = TestClient(app)
+
+    test_headers = {"Authorization": "Bearer fake_test_key"}
+
+    # 1. Non-JSON body rejected
+    res = client.post("/api/groq", content="not json", headers=test_headers)
+    assert res.status_code == 400
+
+    # 2. Payload carrying forbidden extra fields rejected
+    res = client.post("/api/groq", json={
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": "hello"}],
+        "image_base64": "data:image/jpeg;base64,AAAA",
+    }, headers=test_headers)
+    assert res.status_code == 400
+
+    # 3. Non-text message rejected
+    res = client.post("/api/groq", json={
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": {"audio": "blob"}}],
+    }, headers=test_headers)
+    assert res.status_code == 400
+
+    # 4. Valid text-only payload forwarded
+    class FakeResp:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b'{"choices":[{"message":{"content":"It was a warm visit."}}]}'
+
+    sent_payload = {}
+
+    def fake_urlopen(req, timeout=None):
+        sent_payload["body"] = req.data
+        sent_payload["url"] = req.full_url
+        return FakeResp()
+
+    with patch("backend.app.main.urllib.request.urlopen", side_effect=fake_urlopen):
+        res = client.post("/api/groq", json={
+            "model": "llama-3.3-70b-versatile",
+            "max_tokens": 60,
+            "temperature": 0.7,
+            "messages": [
+                {"role": "system", "content": "system"},
+                {"role": "user", "content": "Priya just finished a visit. transcript here"},
+            ],
+        }, headers=test_headers)
+        assert res.status_code == 200
+
+    assert sent_payload["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    forwarded = json.loads(sent_payload["body"])
+    assert set(forwarded) == {"model", "max_tokens", "temperature", "messages"}
+    assert all(set(m) == {"role", "content"} for m in forwarded["messages"])
+    assert all(isinstance(m["content"], str) for m in forwarded["messages"])
+    print("  [OK] Groq proxy rejects media/extra fields and forwards text only.")
+
+
 if __name__ == "__main__":
-    print("\n--- Running Anchor Integration Test Suite ---")
+    print("\n--- Running Anchor Backend Integration Tests ---")
     test_biometrics()
     test_storage()
     test_api_endpoints()
-    print("\nAll Anchor Integration Tests Passed Successfully!")
+    test_groq_proxy_privacy_enforcement()
+    print("\nAll Anchor Backend Integration Tests Passed Successfully!")
