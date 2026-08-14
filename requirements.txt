@@ -1,10 +1,14 @@
-# Anchor — Face Recognition Module
-# ==================================
-#
-# Uses MediaPipe FaceLandmarker for on-device face detection and
-# geometric landmark-based recognition.  No dlib or C++ compiler
-# required — installs cleanly via pip on all platforms.
+# Anchor — Care Companion Dependencies
+# =====================================
 
+# Web Framework & Real-Time Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+websockets>=12.0
+pydantic>=2.6.0
+httpx>=0.27.0
+
+# On-Device Face Recognition & Vision
 opencv-python>=4.8.0
 mediapipe>=1.0.0
 numpy>=1.24.0

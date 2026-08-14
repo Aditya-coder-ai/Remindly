@@ -239,13 +239,37 @@
 
     $("btnLeave").addEventListener("click", async () => {
       $("btnLeave").disabled = true;
-      await memory.stopCaptureAndSummarize(currentPerson());
+      const person = currentPerson();
+      const sentence = await memory.stopCaptureAndSummarize(person);
+      if (sentence) {
+        try {
+          await fetch(`/people/${person.person_id}/note`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ note: sentence }),
+          });
+        } catch {
+          // Graceful fallback for standalone file:// preview
+        }
+      }
       refresh();
     });
 
     $("btnForce").addEventListener("click", async () => {
       $("btnForce").disabled = true;
-      await memory.forceSummarizeNow(currentPerson());
+      const person = currentPerson();
+      const sentence = await memory.forceSummarizeNow(person);
+      if (sentence) {
+        try {
+          await fetch(`/people/${person.person_id}/note`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ note: sentence }),
+          });
+        } catch {
+          // Graceful fallback for standalone file:// preview
+        }
+      }
       refresh();
     });
 

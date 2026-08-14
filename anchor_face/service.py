@@ -186,12 +186,21 @@ class RecognitionService:
         )
 
         try:
-            # Check model file
+            # Ensure model file exists (auto-download if missing)
             if not os.path.exists(_MODEL_PATH):
-                logger.error("FaceLandmarker model not found at %s", _MODEL_PATH)
-                self._camera_available = False
-                self.broadcast_event({"type": "status", "data": self.get_status()})
-                return
+                logger.info("FaceLandmarker model not found at %s. Downloading...", _MODEL_PATH)
+                try:
+                    import urllib.request
+                    urllib.request.urlretrieve(
+                        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+                        _MODEL_PATH,
+                    )
+                    logger.info("FaceLandmarker model downloaded successfully.")
+                except Exception as dl_err:
+                    logger.error("Failed to auto-download FaceLandmarker model: %s", dl_err)
+                    self._camera_available = False
+                    self.broadcast_event({"type": "status", "data": self.get_status()})
+                    return
 
             from mediapipe.tasks.python import BaseOptions
             from mediapipe.tasks.python.vision import (
@@ -315,9 +324,69 @@ class RecognitionService:
     def get_latest_frame_jpeg(self) -> Optional[bytes]:
         """Return the latest camera frame encoded as JPEG bytes for web streaming."""
         with self._frame_lock:
-            if self._latest_bgr_frame is None:
-                return None
-            frame = self._latest_bgr_frame.copy()
+            if self._latest_bgr_frame is not None:
+                frame = self._latest_bgr_frame.copy()
+            else:
+                frame = None
+
+        if frame is None:
+            # Generate an informative standby canvas so the browser stream never hangs
+            standby = np.zeros((480, 640, 3), dtype=np.uint8)
+            standby[:] = (26, 32, 28)  # Deep calm dark green/slate
+            
+            # Draw subtle grid/frame border
+            cv2.rectangle(standby, (10, 10), (630, 470), (45, 60, 50), 1)
+            
+            # Status text
+            cv2.putText(
+                standby,
+                "ANCHOR REAL-TIME VISION",
+                (180, 210),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (140, 190, 155),
+                2,
+                cv2.LINE_AA,
+            )
+            
+            if self._recognizer and self._recognizer.confirmed_person:
+                p_id = self._recognizer.confirmed_person
+                p = self.storage.get_profile(p_id)
+                name = p.name if p else p_id.capitalize()
+                cv2.putText(
+                    standby,
+                    f"Visitor Detected: {name}",
+                    (195, 255),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (80, 220, 120),
+                    2,
+                    cv2.LINE_AA,
+                )
+            else:
+                cv2.putText(
+                    standby,
+                    "Camera Standby / Simulation Mode Active",
+                    (150, 250),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (160, 170, 165),
+                    1,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    standby,
+                    "Simulate visits or connect webcam to view live feed",
+                    (135, 280),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.42,
+                    (110, 125, 120),
+                    1,
+                    cv2.LINE_AA,
+                )
+
+            ret, jpeg = cv2.imencode(".jpg", standby, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            return jpeg.tobytes() if ret else None
 
         # Add recognition indicator overlay
         if self._recognizer and self._recognizer.confirmed_person:
