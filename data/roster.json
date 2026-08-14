@@ -5,9 +5,15 @@
     "relationship": "Daughter",
     "avatar_color": "#2f6f4f",
     "avatar_url": "",
-    "note": "Priya brought over fresh chamomile tea and you looked through photos from the lake house together.",
-    "last_visited": "August 14, 2026",
+    "note": "You enjoyed fresh strawberries from the farmer's market with Priya during a lovely breakfast together.",
+    "last_visited": "August 14, 2026, 03:18 PM",
     "history": [
+      {
+        "timestamp": 1786700887.2715032,
+        "date_str": "August 14, 2026, 03:18 PM",
+        "note": "You enjoyed fresh strawberries from the farmer's market with Priya during a lovely breakfast together.",
+        "transcript": "Priya: Dad, I brought some fresh strawberries from the farmer market, let us have them with breakfast!"
+      },
       {
         "timestamp": 1786525525.0608974,
         "date_str": "2 days ago",
@@ -66,8 +72,14 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "Anna and you watered the balcony sunflowers together.",
-    "last_visited": "August 14, 2026, 02:35 PM",
+    "last_visited": "August 14, 2026, 03:39 PM",
     "history": [
+      {
+        "timestamp": 1786702179.1288102,
+        "date_str": "August 14, 2026, 03:39 PM",
+        "note": "Anna and you watered the balcony sunflowers together.",
+        "transcript": "Let's water these lovely flowers today."
+      },
       {
         "timestamp": 1786698346.7078676,
         "date_str": "August 14, 2026, 02:35 PM",

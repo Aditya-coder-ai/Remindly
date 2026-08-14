@@ -26,19 +26,6 @@ const els = {
   wsStatusDot: $("wsStatusDot"),
   wsStatusText: $("wsStatusText"),
 
-  ambientScreen: $("ambientScreen"),
-  ambientClock: $("ambientClock"),
-  ambientDate: $("ambientDate"),
-  ambientRecentList: $("ambientRecentList"),
-
-  visitorScreen: $("visitorScreen"),
-  visitorAvatar: $("visitorAvatar"),
-  visitorName: $("visitorName"),
-  visitorRelationship: $("visitorRelationship"),
-  visitorMemoryNote: $("visitorMemoryNote"),
-  listeningSubtext: $("listeningSubtext"),
-  btnManualEndVisit: $("btnManualEndVisit"),
-
   monitorBadge: $("monitorBadge"),
   liveTranscriptBox: $("liveTranscriptBox"),
   typedSpeechInput: $("typedSpeechInput"),
@@ -69,18 +56,7 @@ const memory = new ConversationMemory({
 });
 
 // ---------------------------------------------------------------------------
-// 1. Clock & Ambient Date
-// ---------------------------------------------------------------------------
-function updateClock() {
-  const now = new Date();
-  els.ambientClock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  els.ambientDate.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ---------------------------------------------------------------------------
-// 2. View Tab Switching
+// 1. View Tab Switching
 // ---------------------------------------------------------------------------
 els.tabPatient.addEventListener("click", () => {
   els.tabPatient.classList.add("active");
@@ -163,17 +139,9 @@ async function onPersonArrived(person) {
   const refreshed = rosterMap.get(person.person_id) || person;
   activePerson = refreshed;
 
-  // Update Patient Companion UI
-  els.visitorName.textContent = activePerson.name;
-  els.visitorRelationship.textContent = `${activePerson.relationship} 🌿`;
-  els.visitorAvatar.textContent = (activePerson.name || "A")[0].toUpperCase();
-  els.visitorAvatar.style.background = activePerson.avatar_color || "var(--primary)";
-
-  const noteText = activePerson.note || `Welcome! ${activePerson.name} is happy to visit with you today.`;
-  els.visitorMemoryNote.textContent = `"${noteText}"`;
-
-  els.ambientScreen.classList.add("hidden");
-  els.visitorScreen.classList.remove("hidden");
+  // Update Patient Companion UI — the React PatientView cross-fades from
+  // the clock screen to the recognition card, driven purely by this state.
+  window.AnchorPatientView?.setPerson(activePerson);
 
   // Update Caregiver Monitor
   els.monitorBadge.textContent = `In Visit with ${activePerson.name}`;
@@ -193,10 +161,18 @@ async function onPersonLeft() {
 
   const leavingPerson = activePerson;
   isVisitActive = false;
+  activePerson = null;
 
-  els.listeningSubtext.textContent = "Visit completed. Generating gentle memory note...";
+  // The recognition card fades away on its own the moment the person leaves —
+  // PatientView cross-fades back to the clock screen, driven by this null.
+  window.AnchorPatientView?.setPerson(null);
 
-  // Summarize conversation via Groq
+  // Caregiver monitor back to idle
+  els.monitorBadge.textContent = "Idle";
+  els.monitorBadge.style.background = "var(--primary-subtle)";
+  els.monitorBadge.style.color = "var(--primary)";
+
+  // Summarize conversation via Groq (runs in the background)
   const rawTranscript = memory.getTranscript();
   const summarySentence = await memory.stopCaptureAndSummarize(leavingPerson);
 
@@ -217,18 +193,7 @@ async function onPersonLeft() {
     }
   }
 
-  // Fade back to Ambient Screen after 3 seconds
-  setTimeout(() => {
-    if (!isVisitActive) {
-      activePerson = null;
-      els.visitorScreen.classList.add("hidden");
-      els.ambientScreen.classList.remove("hidden");
-      els.monitorBadge.textContent = "Idle";
-      els.monitorBadge.style.background = "var(--primary-subtle)";
-      els.monitorBadge.style.color = "var(--primary)";
-      updateTranscriptBox();
-    }
-  }, 3500);
+  updateTranscriptBox();
 }
 
 // ---------------------------------------------------------------------------
@@ -257,8 +222,6 @@ els.btnClearSpeech.addEventListener("click", () => {
   memory.resetTranscript();
   updateTranscriptBox();
 });
-
-els.btnManualEndVisit.addEventListener("click", onPersonLeft);
 
 // ---------------------------------------------------------------------------
 // 6. Simulation Triggers
@@ -297,23 +260,9 @@ async function loadRoster() {
     list.forEach((p) => rosterMap.set(p.person_id, p));
 
     renderRosterCards(list);
-    renderRecentVisits(list);
   } catch (e) {
     console.error("Failed to load roster:", e);
   }
-}
-
-function renderRecentVisits(list) {
-  els.ambientRecentList.innerHTML = "";
-  list.forEach((p) => {
-    const chip = document.createElement("div");
-    chip.className = "recent-visitor-chip";
-    chip.innerHTML = `
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${p.avatar_color || '#27523d'}"></span>
-      <strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.relationship)})
-    `;
-    els.ambientRecentList.appendChild(chip);
-  });
 }
 
 function renderRosterCards(list) {

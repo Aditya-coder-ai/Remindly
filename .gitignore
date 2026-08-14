@@ -4,6 +4,10 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+node_modules/
+
+# Vite build output for the patient view (regenerate with `npm run build`)
+static/patient-view-dist/
 .venv/
 venv/
 

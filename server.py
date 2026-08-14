@@ -44,6 +44,7 @@ PORT = 8000
 HOST = "0.0.0.0"
 
 BASE_DIR = Path(__file__).resolve().parent
+DIST_DIR = BASE_DIR / "dist"
 STATIC_DIR = BASE_DIR / "static"
 CONV_DIR = BASE_DIR / "conversation_memory"
 PATIENT_DIR = BASE_DIR / "patient_view"
@@ -297,6 +298,9 @@ async def proxy_groq(request: Request):
 # Static File Mounts
 # ---------------------------------------------------------------------------
 
+if (DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -309,12 +313,12 @@ if PATIENT_DIR.exists():
 
 @app.get("/")
 async def root_index():
-    index_path = STATIC_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    demo_path = CONV_DIR / "demo.html"
-    if demo_path.exists():
-        return FileResponse(str(demo_path))
+    dist_index = DIST_DIR / "index.html"
+    if dist_index.exists():
+        return FileResponse(str(dist_index))
+    static_index = STATIC_DIR / "index.html"
+    if static_index.exists():
+        return FileResponse(str(static_index))
     return HTMLResponse("<h1>Anchor Dementia-Care Companion Server is Running</h1>")
 
 
