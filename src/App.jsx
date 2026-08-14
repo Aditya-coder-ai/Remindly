@@ -10,7 +10,16 @@ export default function App() {
   const [activePerson, setActivePerson] = useState(null);
   const activePersonRef = useRef(null);
 
-  const { profiles, addProfile, deleteProfile, saveUpdatedNote, reload: reloadRoster } = useRoster();
+  const {
+    profiles,
+    addProfile,
+    deleteProfile,
+    registerFace,
+    clearFaceEncodings,
+    saveUpdatedNote,
+    reload: reloadRoster,
+  } = useRoster();
+
   const {
     isCapturing,
     transcript,
@@ -21,7 +30,6 @@ export default function App() {
   } = useConversationMemory();
 
   const handlePersonArrived = useCallback((person) => {
-    // Find latest matching profile in roster
     const match = profiles.find((p) => p.person_id === person.person_id) || person;
     activePersonRef.current = match;
     setActivePerson(match);
@@ -159,6 +167,8 @@ export default function App() {
             profiles={profiles}
             onAddPerson={addProfile}
             onDeletePerson={deleteProfile}
+            onRegisterFace={registerFace}
+            onClearEncodings={clearFaceEncodings}
           />
         )}
       </main>

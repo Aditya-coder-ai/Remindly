@@ -17,6 +17,8 @@ export default function CaregiverDashboard({
   profiles,
   onAddPerson,
   onDeletePerson,
+  onRegisterFace,
+  onClearEncodings,
 }) {
   const visitorName = activePerson?.name || "None";
 
@@ -47,6 +49,8 @@ export default function CaregiverDashboard({
           profiles={profiles}
           onAddPerson={onAddPerson}
           onDeletePerson={onDeletePerson}
+          onRegisterFace={onRegisterFace}
+          onClearEncodings={onClearEncodings}
         />
 
         <AiSettings />
