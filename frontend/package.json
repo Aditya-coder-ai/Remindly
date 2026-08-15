@@ -1,0 +1,20 @@
+{
+  "name": "anchor-patient-view",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Patient-facing display component for Anchor — a calm clock screen that cross-fades to a recognition card when a known person is confirmed in frame.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.143.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

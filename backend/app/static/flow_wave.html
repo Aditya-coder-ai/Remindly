@@ -360,7 +360,7 @@
             p.y += c * cos(s * t + a * p.x);
             p.y += c * sin(s * t + a * p.z) + t * b;
             p.z += c * cos(s * t + a * p.y);
-            p.z += c * sin(s * t + a * p.x) + t * b;
+            p.z += c * sin(s * t + a * p.x);
             p.x += c * cos(s * t + a * p.z);
             return cos(p + vec3(1.0, 2.0, 4.0));
           }
