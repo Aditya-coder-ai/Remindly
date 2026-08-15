@@ -185,9 +185,9 @@ def simulate_event(payload: SimulateInput):
 # ---------------------------------------------------------------------------
 
 @app.get("/video_feed")
-def video_feed():
+async def video_feed():
     """Live MJPEG video stream with bounding boxes and biometric overlays."""
-    def generate():
+    async def generate():
         while True:
             frame_bytes = recognition_service.get_latest_frame_jpeg()
             if frame_bytes:
@@ -195,12 +195,21 @@ def video_feed():
                     b"--frame\r\n"
                     b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
                 )
-            asyncio.run(asyncio.sleep(0.06))
+            await asyncio.sleep(0.06)
 
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame",
     )
+
+
+@app.get("/api/camera_snapshot")
+def camera_snapshot():
+    """Return a single JPEG frame from the live camera feed."""
+    frame_bytes = recognition_service.get_latest_frame_jpeg()
+    if not frame_bytes:
+        raise HTTPException(status_code=503, detail="No camera frame available")
+    return Response(content=frame_bytes, media_type="image/jpeg")
 
 
 # ---------------------------------------------------------------------------

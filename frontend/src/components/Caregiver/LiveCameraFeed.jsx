@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react";
 export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   const [streamMode, setStreamMode] = useState("mjpeg"); // 'mjpeg' | 'snapshot'
   const [streamKey, setStreamKey] = useState(Date.now());
-  const [snapshotUrl, setSnapshotUrl] = useState(`/camera_snapshot?t=${Date.now()}`);
+  const [snapshotUrl, setSnapshotUrl] = useState(`/api/camera_snapshot?t=${Date.now()}`);
   const [isConnected, setIsConnected] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -18,7 +18,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   useEffect(() => {
     if (streamMode === "snapshot") {
       snapshotIntervalRef.current = setInterval(() => {
-        setSnapshotUrl(`/camera_snapshot?t=${Date.now()}`);
+        setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
       }, 100);
     } else {
       if (snapshotIntervalRef.current) {
@@ -37,7 +37,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
     setHasError(false);
     setIsConnected(true);
     setStreamKey(Date.now());
-    setSnapshotUrl(`/camera_snapshot?t=${Date.now()}`);
+    setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
   };
 
   const handleImgError = () => {

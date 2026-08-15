@@ -343,7 +343,7 @@ class RecognitionService:
             }
         return {"success": False, "error": f"Person '{person_id}' not found in roster."}
 
-    def get_latest_frame_jpeg(self) -> bytes:
+    def get_latest_frame_jpeg(self) -> Optional[bytes]:
         """Return the latest camera frame encoded as JPEG with visual face bounding boxes."""
         with self._frame_lock:
             if self._latest_bgr_frame is not None:

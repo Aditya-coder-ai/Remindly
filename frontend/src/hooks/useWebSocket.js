@@ -8,12 +8,16 @@ export function useWebSocket(onEvent) {
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   const wsRef = useRef(null);
   const onEventRef = useRef(onEvent);
+  const reconnectTimerRef = useRef(null);
+  const unmountedRef = useRef(false);
 
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
 
   const connect = useCallback(() => {
+    if (unmountedRef.current) return;
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/ws`;
@@ -39,10 +43,13 @@ export function useWebSocket(onEvent) {
 
     ws.onclose = () => {
       setConnectionStatus("disconnected");
-      // Auto-reconnect after 2.5s
-      setTimeout(() => {
-        connect();
-      }, 2500);
+      // Auto-reconnect after 2.5s, unless unmounted
+      if (!unmountedRef.current) {
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectTimerRef.current = null;
+          connect();
+        }, 2500);
+      }
     };
 
     ws.onerror = () => {
@@ -51,10 +58,18 @@ export function useWebSocket(onEvent) {
   }, []);
 
   useEffect(() => {
+    unmountedRef.current = false;
     connect();
     return () => {
+      unmountedRef.current = true;
+      // Cancel any pending reconnect timer
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);

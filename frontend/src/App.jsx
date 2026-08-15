@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import PatientView from "./components/PatientView/PatientView.jsx";
 import CaregiverDashboard from "./components/Caregiver/CaregiverDashboard.jsx";
+import FlowWave from "./components/FlowWave/FlowWave.jsx";
 import { useWebSocket } from "./hooks/useWebSocket.js";
 import { useConversationMemory } from "./hooks/useConversationMemory.js";
 import { useRoster } from "./hooks/useRoster.js";
@@ -102,6 +103,9 @@ export default function App() {
 
   return (
     <>
+      {/* Three.js Flow Wave Background */}
+      <FlowWave />
+
       {/* Top Bar Navigation */}
       <header className="top-nav">
         <div className="brand-wrapper">
