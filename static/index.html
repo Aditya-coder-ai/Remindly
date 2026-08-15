@@ -166,6 +166,56 @@
           </div>
         </div>
 
+        <!-- Wearable Capture-Device Pairing -->
+        <div class="panel-card wearable-panel">
+          <h2>
+            <span>📷 Wearable Camera</span>
+            <span class="badge" id="wearableBadge">Not Connected</span>
+          </h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+            Pair a phone or wearable camera to stream video for face recognition instead of the built-in webcam.
+          </p>
+
+          <!-- Pre-connect: show Connect button -->
+          <div id="wearablePreConnect">
+            <button class="btn btn-primary" id="btnStartPairing" style="width: 100%;">
+              Connect Wearable Camera
+            </button>
+          </div>
+
+          <!-- Pairing active: show QR + code -->
+          <div id="wearablePairing" class="hidden">
+            <div class="qr-container" id="qrContainer">
+              <canvas id="qrCanvas"></canvas>
+            </div>
+            <div class="pairing-code-display">
+              <label style="text-align: center;">Pairing Code</label>
+              <div class="pairing-code" id="pairingCodeText">------</div>
+            </div>
+            <div class="wearable-status" id="wearableStatusRow">
+              <span class="wearable-status-dot" id="wearableStatusDot"></span>
+              <span id="wearableStatusText">Waiting for capture device…</span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-light); text-align: center; margin-top: 10px;">
+              On the capture device, open <strong>http://&lt;this-ip&gt;:8000/capture</strong> and enter the code above.
+            </p>
+            <button class="btn btn-secondary" id="btnStopPairing" style="width: 100%; margin-top: 12px;">
+              Cancel Pairing
+            </button>
+          </div>
+
+          <!-- Connected: show status + disconnect -->
+          <div id="wearableConnected" class="hidden">
+            <div class="wearable-status connected">
+              <span class="wearable-status-dot connected"></span>
+              <span>Wearable camera streaming ✓</span>
+            </div>
+            <button class="btn btn-secondary" id="btnDisconnectWearable" style="width: 100%; margin-top: 12px;">
+              Disconnect Wearable
+            </button>
+          </div>
+        </div>
+
       </div>
 
     </section>
@@ -200,6 +250,10 @@
       </form>
     </div>
   </div>
+
+  <!-- CDN: PeerJS for WebRTC signaling, QRCode for pairing display -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <!-- Scripts -->
   <script type="module" src="/static/patient-view-dist/bootstrap.js"></script>

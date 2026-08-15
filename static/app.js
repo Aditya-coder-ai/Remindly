@@ -6,6 +6,7 @@
 
 import { ConversationMemory } from "/conversation_memory/conversation_memory.js";
 import { ANCHOR_API_CONFIG } from "/conversation_memory/summarize.js";
+import { startPairing, stopPairing, getStatus as getWearableStatus } from "/static/wearable-pairing.js";
 
 // State
 let ws = null;
@@ -46,6 +47,20 @@ const els = {
 
   cfgApiKey: $("cfgApiKey"),
   cfgModel: $("cfgModel"),
+
+  cameraStatusBadge: $("cameraStatusBadge"),
+  wearableBadge: $("wearableBadge"),
+  wearablePreConnect: $("wearablePreConnect"),
+  wearablePairing: $("wearablePairing"),
+  wearableConnected: $("wearableConnected"),
+  btnStartPairing: $("btnStartPairing"),
+  btnStopPairing: $("btnStopPairing"),
+  btnDisconnectWearable: $("btnDisconnectWearable"),
+  qrCanvas: $("qrCanvas"),
+  pairingCodeText: $("pairingCodeText"),
+  wearableStatusRow: $("wearableStatusRow"),
+  wearableStatusDot: $("wearableStatusDot"),
+  wearableStatusText: $("wearableStatusText"),
 };
 
 // Initialize Conversation Memory
@@ -112,6 +127,15 @@ function connectWebSocket() {
 async function handleServerEvent(payload) {
   switch (payload.type) {
     case "status":
+      if (payload.data?.remote_active) {
+        els.cameraStatusBadge.textContent = "Wearable Stream";
+        els.cameraStatusBadge.style.background = "var(--primary)";
+        els.cameraStatusBadge.style.color = "white";
+      } else {
+        els.cameraStatusBadge.textContent = "Webcam Stream";
+        els.cameraStatusBadge.style.background = "";
+        els.cameraStatusBadge.style.color = "";
+      }
       break;
 
     case "recognized":
@@ -351,6 +375,99 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ---------------------------------------------------------------------------
+// 9. Wearable Capture-Device Pairing (Phone / Future Glasses Stream)
+// ---------------------------------------------------------------------------
+// PRIVACY TRADEOFF — Capture Device Pairing
+// When paired, video streams from the wearable device over the LAN before
+// recognition. Video frames are relayed from the WebRTC MediaStream into
+// the Python recognition pipeline via /api/remote_frame.
+
+function updateWearableUIState(state, detail) {
+  switch (state) {
+    case "idle":
+      els.wearableBadge.textContent = "Not Connected";
+      els.wearableBadge.className = "badge";
+      els.wearableBadge.style.background = "";
+      els.wearableBadge.style.color = "";
+      els.wearablePreConnect.classList.remove("hidden");
+      els.wearablePairing.classList.add("hidden");
+      els.wearableConnected.classList.add("hidden");
+      break;
+
+    case "initializing":
+    case "waiting":
+      els.wearableBadge.textContent = "Pairing...";
+      els.wearableBadge.className = "badge";
+      els.wearableBadge.style.background = "";
+      els.wearableBadge.style.color = "";
+      els.wearablePreConnect.classList.add("hidden");
+      els.wearablePairing.classList.remove("hidden");
+      els.wearableConnected.classList.add("hidden");
+      els.wearableStatusDot.className = "wearable-status-dot waiting";
+      els.wearableStatusText.textContent = detail || "Waiting for capture device…";
+      break;
+
+    case "connected":
+      els.wearableBadge.textContent = "Connected ✓";
+      els.wearableBadge.style.background = "var(--primary)";
+      els.wearableBadge.style.color = "white";
+      els.wearablePreConnect.classList.add("hidden");
+      els.wearablePairing.classList.add("hidden");
+      els.wearableConnected.classList.remove("hidden");
+      els.cameraStatusBadge.textContent = "Wearable Stream";
+      els.cameraStatusBadge.style.background = "var(--primary)";
+      els.cameraStatusBadge.style.color = "white";
+      break;
+
+    case "error":
+      els.wearableStatusDot.className = "wearable-status-dot error";
+      els.wearableStatusText.textContent = detail || "Pairing error";
+      break;
+  }
+}
+
+function initWearablePairing() {
+  if (!els.btnStartPairing) return;
+
+  els.btnStartPairing.addEventListener("click", () => {
+    startPairing({
+      onPeerIdReady: (peerId) => {
+        els.pairingCodeText.textContent = peerId;
+        if (window.QRCode && els.qrCanvas) {
+          QRCode.toCanvas(els.qrCanvas, peerId, {
+            width: 160,
+            margin: 2,
+            color: {
+              dark: "#163024",
+              light: "#ffffff",
+            },
+          }, (err) => {
+            if (err) console.error("QR Code generation error:", err);
+          });
+        }
+      },
+      onStatusChange: (status, detail) => {
+        updateWearableUIState(status, detail);
+      },
+    });
+  });
+
+  els.btnStopPairing.addEventListener("click", () => {
+    stopPairing();
+    updateWearableUIState("idle");
+  });
+
+  els.btnDisconnectWearable.addEventListener("click", () => {
+    stopPairing();
+    updateWearableUIState("idle");
+    els.cameraStatusBadge.textContent = "Webcam Stream";
+    els.cameraStatusBadge.style.background = "";
+    els.cameraStatusBadge.style.color = "";
+  });
+}
+
 // Initialization
 connectWebSocket();
 loadRoster();
+initWearablePairing();

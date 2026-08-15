@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Anchor — Capture Device</title>
+
+  <!--
+    ===================================================================
+    PRIVACY TRADEOFF — Capture Device Pairing
+    ===================================================================
+    This page streams raw camera video from the capture device (phone /
+    future glasses hardware) to the compute device via WebRTC peer-to-peer.
+    Video leaves this device BEFORE face recognition runs — recognition
+    happens only on the compute device.
+
+    The tradeoff is accepted because:
+      - Wearable/glasses hardware lacks compute for on-device recognition
+      - WebRTC is encrypted (DTLS-SRTP) and peer-to-peer (no cloud relay)
+      - Limited to same-LAN only (no TURN server configured)
+
+    Revisit when on-device inference becomes viable for glasses-class HW.
+    ===================================================================
+  -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #27523d;
+      --primary-deep: #163024;
+      --primary-light: #3e7358;
+      --primary-subtle: #ebf3ee;
+      --bg: #0f1712;
+      --surface: #1a2420;
+      --surface-raised: #222f29;
+      --text: #e8efe9;
+      --text-muted: #8a9e90;
+      --border: #2e3f36;
+      --amber: #d97706;
+      --green: #10b981;
+      --red: #ef4444;
+      --radius: 14px;
+      --font: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* Fullscreen camera preview (subtle, behind the UI) */
+    #cameraPreview {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.15;
+      z-index: 0;
+      transform: scaleX(-1);
+    }
+
+    .capture-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(39, 82, 61, 0.4);
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Status indicator */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .status-row.waiting {
+      background: rgba(107, 114, 128, 0.15);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      color: var(--text-muted);
+    }
+
+    .status-row.connecting {
+      background: rgba(217, 119, 6, 0.12);
+      border: 1px solid rgba(217, 119, 6, 0.3);
+      color: var(--amber);
+    }
+
+    .status-row.connected {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--green);
+    }
+
+    .status-row.error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .waiting .status-dot { background: #6b7280; }
+    .connecting .status-dot { background: var(--amber); animation: pulse 1.2s infinite; }
+    .connected .status-dot { background: var(--green); animation: pulse 1.8s infinite; }
+    .error .status-dot { background: var(--red); }
+
+    @keyframes pulse {
+      0%   { transform: scale(1);   opacity: 1;   }
+      50%  { transform: scale(1.5); opacity: 0.5; }
+      100% { transform: scale(1);   opacity: 1;   }
+    }
+
+    /* Pairing code input */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .code-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: lowercase;
+      transition: border-color 0.2s;
+    }
+
+    .code-input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(39, 82, 61, 0.25);
+    }
+
+    .code-input::placeholder {
+      color: #4a5a50;
+      letter-spacing: 0.05em;
+      font-size: 14px;
+    }
+
+    .connect-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--primary);
+      color: white;
+    }
+
+    .connect-btn:hover:not(:disabled) {
+      background: var(--primary-light);
+      box-shadow: 0 4px 16px rgba(39, 82, 61, 0.4);
+    }
+
+    .connect-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .disconnect-btn {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-raised);
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+
+    .disconnect-btn:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 18px;
+      line-height: 1.5;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Subtle fullscreen camera preview behind the card -->
+  <video id="cameraPreview" autoplay playsinline muted></video>
+
+  <div class="capture-card">
+    <div class="brand">
+      <div class="brand-icon">⚓</div>
+      <div>
+        <h1>Anchor</h1>
+        <p>Wearable Capture Device</p>
+      </div>
+    </div>
+
+    <!-- Status indicator -->
+    <div class="status-row waiting" id="statusRow">
+      <span class="status-dot"></span>
+      <span id="statusText">Waiting to connect…</span>
+    </div>
+
+    <!-- Pairing code entry (visible when not connected) -->
+    <div id="pairingSection">
+      <div class="input-group">
+        <label for="codeInput">Pairing Code</label>
+        <input type="text" id="codeInput" class="code-input"
+               placeholder="Enter code from Anchor" autocomplete="off"
+               spellcheck="false" autocapitalize="none" />
+      </div>
+      <button class="connect-btn" id="connectBtn">Connect to Anchor</button>
+    </div>
+
+    <!-- Disconnect (visible when connected) -->
+    <div id="connectedSection" class="hidden">
+      <button class="disconnect-btn" id="disconnectBtn">Disconnect</button>
+    </div>
+
+    <p class="hint">
+      Open Anchor on the compute device → Caregiver tab →<br>
+      "Connect Wearable Camera" to get the pairing code.
+    </p>
+  </div>
+
+  <!-- PeerJS from CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <script>
+    /**
+     * Anchor Capture Device — Camera + PeerJS Streaming
+     *
+     * This page does ONE job: open the camera and send video to the
+     * compute device via WebRTC.  No face recognition, no patient UI,
+     * no interaction surface.  Mirrors real glasses-class hardware.
+     */
+
+    const $ = (id) => document.getElementById(id);
+    const statusRow = $("statusRow");
+    const statusText = $("statusText");
+    const codeInput = $("codeInput");
+    const connectBtn = $("connectBtn");
+    const disconnectBtn = $("disconnectBtn");
+    const pairingSection = $("pairingSection");
+    const connectedSection = $("connectedSection");
+    const cameraPreview = $("cameraPreview");
+
+    let localStream = null;
+    let peer = null;
+    let activeCall = null;
+    let reconnectTimer = null;
+    let lastPeerCode = null;  // Remember for auto-reconnect
+
+    // ------------------------------------------------------------------
+    // Status UI helper
+    // ------------------------------------------------------------------
+    function setStatus(state, text) {
+      statusRow.className = `status-row ${state}`;
+      statusText.textContent = text;
+    }
+
+    // ------------------------------------------------------------------
+    // Camera initialization
+    // ------------------------------------------------------------------
+    async function initCamera() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },  // rear camera preferred
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+          audio: false,
+        });
+        cameraPreview.srcObject = localStream;
+        return true;
+      } catch (err) {
+        console.error("Camera access denied:", err);
+        setStatus("error", "Camera access denied");
+        return false;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // PeerJS connection
+    // ------------------------------------------------------------------
+    function createPeer() {
+      return new Promise((resolve, reject) => {
+        // Generate a random ID for this capture device
+        const myId = "anchor-cap-" + Math.random().toString(36).slice(2, 8);
+        const p = new Peer(myId);
+
+        p.on("open", () => {
+          console.log("Capture device PeerJS ready:", myId);
+          resolve(p);
+        });
+
+        p.on("error", (err) => {
+          console.error("PeerJS error:", err);
+          if (err.type === "peer-unavailable") {
+            setStatus("error", "Pairing code not found — check the code");
+          } else if (err.type === "network") {
+            setStatus("error", "Network error — retrying…");
+            scheduleReconnect();
+          } else {
+            setStatus("error", `Connection error: ${err.type}`);
+          }
+        });
+
+        p.on("disconnected", () => {
+          console.log("PeerJS disconnected from signaling server");
+          if (peer && !peer.destroyed) {
+            // Try to reconnect to signaling server
+            setTimeout(() => {
+              if (peer && !peer.destroyed) {
+                peer.reconnect();
+              }
+            }, 2000);
+          }
+        });
+
+        // Timeout after 10s
+        setTimeout(() => {
+          if (!p.open) {
+            p.destroy();
+            reject(new Error("PeerJS connection timeout"));
+          }
+        }, 10000);
+      });
+    }
+
+    async function connectToPeer(remotePeerId) {
+      if (!localStream) {
+        setStatus("error", "Camera not available");
+        return;
+      }
+
+      lastPeerCode = remotePeerId;
+      setStatus("connecting", "Connecting…");
+
+      try {
+        // Clean up old peer if any
+        if (peer && !peer.destroyed) {
+          peer.destroy();
+        }
+
+        peer = await createPeer();
+
+        // Call the compute device and send our camera stream
+        activeCall = peer.call(remotePeerId, localStream);
+
+        if (!activeCall) {
+          setStatus("error", "Failed to initiate call — check code");
+          return;
+        }
+
+        activeCall.on("stream", () => {
+          // We receive nothing useful back, but WebRTC requires handling this
+          console.log("Call bidirectional stream established");
+        });
+
+        activeCall.on("close", () => {
+          console.log("Call closed");
+          onDisconnected();
+        });
+
+        activeCall.on("error", (err) => {
+          console.error("Call error:", err);
+          onDisconnected();
+        });
+
+        // PeerJS fires 'open' on the MediaConnection when the
+        // WebRTC transport is actually established
+        activeCall.peerConnection.addEventListener("connectionstatechange", () => {
+          const state = activeCall.peerConnection.connectionState;
+          console.log("WebRTC connection state:", state);
+          if (state === "connected") {
+            onConnected();
+          } else if (state === "disconnected" || state === "failed") {
+            onDisconnected();
+          }
+        });
+
+        // Fallback: check connection after 3s
+        setTimeout(() => {
+          if (activeCall && activeCall.peerConnection) {
+            const state = activeCall.peerConnection.connectionState;
+            if (state === "connected") {
+              onConnected();
+            }
+          }
+        }, 3000);
+
+      } catch (err) {
+        console.error("Connection failed:", err);
+        setStatus("error", "Connection failed — retrying…");
+        scheduleReconnect();
+      }
+    }
+
+    function onConnected() {
+      setStatus("connected", "Connected — streaming video ✓");
+      pairingSection.classList.add("hidden");
+      connectedSection.classList.remove("hidden");
+      clearReconnectTimer();
+    }
+
+    function onDisconnected() {
+      setStatus("connecting", "Connection lost — reconnecting…");
+      connectedSection.classList.add("hidden");
+      pairingSection.classList.remove("hidden");
+      scheduleReconnect();
+    }
+
+    function disconnect() {
+      clearReconnectTimer();
+      lastPeerCode = null;
+
+      if (activeCall) {
+        activeCall.close();
+        activeCall = null;
+      }
+      if (peer && !peer.destroyed) {
+        peer.destroy();
+        peer = null;
+      }
+
+      setStatus("waiting", "Disconnected");
+      connectedSection.classList.add("hidden");
+      pairingSection.classList.remove("hidden");
+    }
+
+    // ------------------------------------------------------------------
+    // Auto-reconnect
+    // ------------------------------------------------------------------
+    function scheduleReconnect() {
+      clearReconnectTimer();
+      if (!lastPeerCode) return;
+
+      reconnectTimer = setTimeout(() => {
+        if (lastPeerCode) {
+          console.log("Attempting auto-reconnect to:", lastPeerCode);
+          connectToPeer(lastPeerCode);
+        }
+      }, 3000);
+    }
+
+    function clearReconnectTimer() {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // UI Wiring
+    // ------------------------------------------------------------------
+    connectBtn.addEventListener("click", () => {
+      const code = codeInput.value.trim().toLowerCase();
+      if (!code) {
+        codeInput.focus();
+        return;
+      }
+      connectToPeer(code);
+    });
+
+    codeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        connectBtn.click();
+      }
+    });
+
+    disconnectBtn.addEventListener("click", disconnect);
+
+    // ------------------------------------------------------------------
+    // Init
+    // ------------------------------------------------------------------
+    (async () => {
+      const camOk = await initCamera();
+      if (camOk) {
+        setStatus("waiting", "Camera ready — enter pairing code");
+        codeInput.focus();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -694,6 +694,107 @@ textarea {
 }
 
 /* --------------------------------------------------------------------------
+   Wearable Capture-Device Pairing Panel
+   -------------------------------------------------------------------------- */
+.wearable-panel {
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.wearable-panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--amber-warm));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.wearable-panel.paired::after {
+  opacity: 1;
+}
+
+.qr-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: white;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.qr-container canvas {
+  width: 160px !important;
+  height: 160px !important;
+}
+
+.pairing-code-display {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.pairing-code {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--primary-deep);
+  background: var(--primary-subtle);
+  border: 1px solid rgba(39, 82, 61, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  display: inline-block;
+  user-select: all;
+  cursor: pointer;
+}
+
+.wearable-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.wearable-status.connected {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #059669;
+}
+
+.wearable-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6b7280;
+  flex-shrink: 0;
+}
+
+.wearable-status-dot.waiting {
+  background: #f59e0b;
+  animation: pulse 1.2s infinite;
+}
+
+.wearable-status-dot.connected {
+  background: #10b981;
+  animation: pulse 1.8s infinite;
+}
+
+.wearable-status-dot.error {
+  background: #ef4444;
+}
+
+/* --------------------------------------------------------------------------
    Animations
    -------------------------------------------------------------------------- */
 @keyframes fadeIn {

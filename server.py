@@ -358,6 +358,37 @@ async def clear_encodings(person_id: str):
     return {"success": True, "message": f"Cleared face encodings for {person_id}"}
 
 
+# ---------------------------------------------------------------------------
+# Remote Capture-Device Frame Injection
+# ---------------------------------------------------------------------------
+# PRIVACY TRADEOFF — Capture Device Pairing
+# This endpoint accepts raw JPEG frames from the browser-side WebRTC relay.
+# Raw video travels peer-to-peer over the LAN from the capture device to
+# this compute device BEFORE face recognition runs.  See the full tradeoff
+# discussion in anchor_face/service.py::RecognitionService.
+# ---------------------------------------------------------------------------
+
+@app.post("/api/remote_frame")
+async def receive_remote_frame(request: Request):
+    """Accept a JPEG frame from the browser-side WebRTC relay.
+
+    The browser receives a MediaStream from the capture device via WebRTC,
+    draws each frame to a canvas, encodes it as JPEG, and POSTs the raw
+    bytes here.  We hand the bytes to the recognition service, which
+    writes them into the same shared frame buffer the local webcam would
+    use — completing the source swap.
+    """
+    jpeg_bytes = await request.body()
+    if not jpeg_bytes:
+        raise HTTPException(status_code=400, detail="Empty body — expected raw JPEG bytes")
+
+    ok = recognition_service.inject_remote_frame(jpeg_bytes)
+    if not ok:
+        raise HTTPException(status_code=422, detail="Could not decode JPEG frame")
+
+    return {"ok": True}
+
+
 @app.post("/api/simulate")
 async def simulate_event(data: SimulateInput):
     """Synthetic visit simulation for demos and manual testing."""
@@ -420,6 +451,15 @@ if CONV_DIR.exists():
 
 if PATIENT_DIR.exists():
     app.mount("/patient_view", StaticFiles(directory=str(PATIENT_DIR)), name="patient_view")
+
+
+@app.get("/capture")
+async def capture_page():
+    """Serve the standalone capture-device page (phone / future glasses)."""
+    capture_file = BASE_DIR / "capture.html"
+    if capture_file.exists():
+        return FileResponse(str(capture_file))
+    return HTMLResponse("<h1>capture.html not found</h1>", status_code=404)
 
 
 @app.get("/")

@@ -64,6 +64,27 @@ def _draw_rounded_rect(
 class RecognitionService:
     """Threaded face recognition service that broadcasts events to async WebSocket clients."""
 
+    # ===================================================================
+    # PRIVACY TRADEOFF — Capture Device Pairing
+    # ===================================================================
+    # With the remote-frame injection feature (inject_remote_frame),
+    # raw camera video leaves the capture device and travels peer-to-peer
+    # over the local network to the compute device BEFORE face recognition
+    # runs. This is a step back from the previous architecture where video
+    # never left the device with the camera.
+    #
+    # The tradeoff is accepted because:
+    #   - Wearable/glasses hardware lacks compute for on-device recognition
+    #   - WebRTC is encrypted (DTLS-SRTP) and peer-to-peer (no cloud relay)
+    #   - Limited to same-LAN only (no TURN server configured)
+    #
+    # Revisit when on-device inference becomes viable for glasses-class HW.
+    # ===================================================================
+
+    # How long (seconds) before we consider the remote stream dead and
+    # fall back to the local webcam automatically.
+    _REMOTE_TIMEOUT_SEC: float = 3.0
+
     def __init__(
         self,
         storage: Optional[RosterStorage] = None,
@@ -89,6 +110,18 @@ class RecognitionService:
         # Shared frame for face registration snapshots
         self._latest_bgr_frame: Optional[np.ndarray] = None
         self._frame_lock = threading.Lock()
+
+        # ----- Remote capture-device pairing state -----
+        # When a wearable camera is paired via WebRTC, the browser-side
+        # relay extracts JPEG frames and POSTs them to /api/remote_frame.
+        # Those frames are decoded and written into _latest_bgr_frame by
+        # inject_remote_frame(), and the recognition loop skips local
+        # webcam reads while the remote stream is active.
+        #
+        # >>> THIS IS THE SOURCE SWAP — the exact point where the video
+        # >>> feed switches from local webcam to the remote capture device.
+        self._remote_active: bool = False
+        self._remote_last_seen: float = 0.0  # time.monotonic() of last frame
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
@@ -120,6 +153,7 @@ class RecognitionService:
         return {
             "active": self._running,
             "camera_available": self._camera_available,
+            "remote_active": self._remote_active,
             "current_person": (
                 self._recognizer.confirmed_person
                 if (self._recognizer and self._running)
@@ -128,6 +162,57 @@ class RecognitionService:
             "roster_count": len(self.storage.list_profiles()),
             "timestamp": time.time(),
         }
+
+    # -----------------------------------------------------------------------
+    # Remote Frame Injection (Capture-Device Pairing)
+    # -----------------------------------------------------------------------
+
+    def inject_remote_frame(self, jpeg_bytes: bytes) -> bool:
+        """
+        Accept a JPEG frame from the browser-side WebRTC relay and write it
+        into the shared frame buffer.  The recognition loop will pick it up
+        on its next scan cycle — no other pipeline changes needed.
+
+        Returns True on success, False if the JPEG could not be decoded.
+        """
+        np_arr = np.frombuffer(jpeg_bytes, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if frame is None:
+            return False
+
+        with self._frame_lock:
+            self._latest_bgr_frame = frame
+
+        # Mark remote stream as alive so the recognition loop skips
+        # local webcam reads (the source swap).
+        self._remote_last_seen = time.monotonic()
+        if not self._remote_active:
+            self._remote_active = True
+            logger.info(
+                "Remote capture-device stream activated — "
+                "local webcam paused while remote frames are flowing."
+            )
+            self.broadcast_event({"type": "status", "data": self.get_status()})
+
+        return True
+
+    @property
+    def _remote_stream_alive(self) -> bool:
+        """True if we received a remote frame within the timeout window."""
+        if not self._remote_active:
+            return False
+        return (time.monotonic() - self._remote_last_seen) < self._REMOTE_TIMEOUT_SEC
+
+    def _check_remote_timeout(self) -> None:
+        """Auto-fallback: if the remote stream goes silent, resume local webcam."""
+        if self._remote_active and not self._remote_stream_alive:
+            self._remote_active = False
+            logger.info(
+                "Remote capture-device stream timed out (>%.1fs silence) — "
+                "falling back to local webcam.",
+                self._REMOTE_TIMEOUT_SEC,
+            )
+            self.broadcast_event({"type": "status", "data": self.get_status()})
 
     # -----------------------------------------------------------------------
     # Recognition Callbacks
@@ -187,7 +272,14 @@ class RecognitionService:
         logger.info("Recognition service stopped.")
 
     def _run_loop(self) -> None:
-        """Worker thread loop managing camera and recognizer."""
+        """Worker thread loop managing camera and recognizer.
+
+        SOURCE SWAP POINT — When _remote_active is True, this loop skips
+        cap.read() and instead picks up frames written by
+        inject_remote_frame() into _latest_bgr_frame.  The downstream
+        recognition pipeline (_process_frame / _update_state) is identical
+        regardless of where the frame came from.
+        """
         roster_records = self.storage.get_person_records()
 
         self._recognizer = FaceRecognizer(
@@ -254,13 +346,34 @@ class RecognitionService:
             last_scan_time: float = 0.0
 
             while self._running:
-                ret, frame = cap.read()
-                if not ret:
-                    time.sleep(0.05)
-                    continue
+                # -------------------------------------------------------
+                # SOURCE SWAP: skip local webcam when remote is active.
+                # Remote frames are injected directly into
+                # self._latest_bgr_frame by inject_remote_frame().
+                # -------------------------------------------------------
+                if self._remote_stream_alive:
+                    # Remote capture device is streaming — use its frames.
+                    with self._frame_lock:
+                        frame = (
+                            self._latest_bgr_frame.copy()
+                            if self._latest_bgr_frame is not None
+                            else None
+                        )
+                    if frame is None:
+                        time.sleep(0.03)
+                        continue
+                else:
+                    # Check if remote just timed out → log fallback.
+                    self._check_remote_timeout()
 
-                with self._frame_lock:
-                    self._latest_bgr_frame = frame.copy()
+                    # Normal path: read from the local webcam.
+                    ret, frame = cap.read()
+                    if not ret:
+                        time.sleep(0.05)
+                        continue
+
+                    with self._frame_lock:
+                        self._latest_bgr_frame = frame.copy()
 
                 now = time.monotonic()
                 if now - last_scan_time < self.scan_interval_sec:
