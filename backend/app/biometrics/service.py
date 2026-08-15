@@ -205,15 +205,14 @@ class RecognitionService:
         )
 
         try:
-<<<<<<< HEAD:anchor_face/service.py
-            # Ensure model file exists (auto-download if missing)
-            if not os.path.exists(_MODEL_PATH):
-                logger.info("FaceLandmarker model not found at %s. Downloading...", _MODEL_PATH)
+            if not os.path.exists(MODEL_PATH):
+                logger.info("FaceLandmarker model not found at %s. Downloading...", MODEL_PATH)
                 try:
+                    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
                     import urllib.request
                     urllib.request.urlretrieve(
                         "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-                        _MODEL_PATH,
+                        MODEL_PATH,
                     )
                     logger.info("FaceLandmarker model downloaded successfully.")
                 except Exception as dl_err:
@@ -221,13 +220,6 @@ class RecognitionService:
                     self._camera_available = False
                     self.broadcast_event({"type": "status", "data": self.get_status()})
                     return
-=======
-            if not os.path.exists(MODEL_PATH):
-                logger.error("FaceLandmarker model not found at %s", MODEL_PATH)
-                self._camera_available = False
-                self.broadcast_event({"type": "status", "data": self.get_status()})
-                return
->>>>>>> 42d2f6f (refactor: restructure into dedicated frontend and backend modules with security isolation):backend/app/biometrics/service.py
 
             from mediapipe.tasks.python import BaseOptions
             from mediapipe.tasks.python.vision import (

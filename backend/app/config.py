@@ -22,6 +22,7 @@ MODEL_PATH = str(APP_DIR / "biometrics" / "models" / "face_landmarker.task")
 
 # Frontend production distribution path
 FRONTEND_DIST_DIR = ROOT_DIR / "frontend" / "dist"
+STATIC_DIR = APP_DIR / "static"
 
 # Server Network Settings
 PORT = int(os.environ.get("PORT", 8000))

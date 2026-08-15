@@ -136,6 +136,12 @@ def test_api_endpoints():
     assert res.json()["success"] is True
     print("  [OK] POST /api/simulate visit simulation passed.")
 
+    # 7. GET /flow-wave
+    res = client.get("/flow-wave")
+    assert res.status_code == 200
+    assert "Three.js" in res.text or "Flow Wave" in res.text
+    print("  [OK] GET /flow-wave Three.js scene endpoint passed.")
+
 
 def test_groq_proxy_privacy_enforcement():
     print("Testing Groq proxy privacy enforcement...")

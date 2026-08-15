@@ -30,6 +30,7 @@ from .config import (
     ALLOWED_ORIGINS,
     DEFAULT_GROQ_KEY,
     FRONTEND_DIST_DIR,
+    STATIC_DIR,
     GROQ_ENDPOINT,
     HOST,
     PORT,
@@ -302,11 +303,24 @@ async def groq_proxy(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# Optional Production Frontend Mount
+# Static & Production Frontend Mounts
 # ---------------------------------------------------------------------------
 
 if (FRONTEND_DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_DIR / "assets")), name="assets")
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/flow-wave")
+@app.get("/flow_wave")
+async def flow_wave():
+    """Serve the Three.js Flow Wave scene directly from backend."""
+    flow_wave_file = STATIC_DIR / "flow_wave.html"
+    if flow_wave_file.exists():
+        return FileResponse(str(flow_wave_file))
+    raise HTTPException(status_code=404, detail="flow_wave.html not found")
 
 
 @app.get("/")
@@ -314,6 +328,9 @@ async def root_index():
     dist_index = FRONTEND_DIST_DIR / "index.html"
     if dist_index.exists():
         return FileResponse(str(dist_index))
+    flow_wave_file = STATIC_DIR / "flow_wave.html"
+    if flow_wave_file.exists():
+        return FileResponse(str(flow_wave_file))
     return HTMLResponse(
         """
         <html>
@@ -321,6 +338,7 @@ async def root_index():
             <body style="font-family: sans-serif; padding: 40px; background: #121c17; color: #e0f0e8;">
                 <h1>⚓ Anchor Companion Backend is Running</h1>
                 <p>FastAPI server active on port 8000.</p>
+                <p><a href="/flow-wave" style="color:#34e89a;">View Three.js Flow Wave Scene &rarr;</a></p>
                 <p>To run the frontend dev server, run: <code>cd frontend && npm run dev</code></p>
             </body>
         </html>
