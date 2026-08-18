@@ -56,3 +56,22 @@ DEFAULT_TOLERANCE = 0.22
 DEFAULT_ENTER_STREAK = 3
 DEFAULT_EXIT_STREAK = 5
 DEFAULT_SCAN_INTERVAL = 0.35
+
+# ---------------------------------------------------------------------------
+# Auto-Enrollment Pipeline Thresholds
+# ---------------------------------------------------------------------------
+AUTO_ENROLL_ENABLED = os.environ.get("AUTO_ENROLL_ENABLED", "true").lower() == "true"
+AUTO_ENROLL_MIN_DETECTOR_CONFIDENCE = float(os.environ.get("AUTO_ENROLL_MIN_DETECTOR_CONFIDENCE", "0.65"))
+AUTO_ENROLL_MIN_SHARPNESS = float(os.environ.get("AUTO_ENROLL_MIN_SHARPNESS", "80.0"))
+AUTO_ENROLL_MIN_FACE_SIZE_PX = int(os.environ.get("AUTO_ENROLL_MIN_FACE_SIZE_PX", "80"))
+AUTO_ENROLL_MAX_YAW = float(os.environ.get("AUTO_ENROLL_MAX_YAW", "45.0"))
+AUTO_ENROLL_MAX_PITCH = float(os.environ.get("AUTO_ENROLL_MAX_PITCH", "30.0"))
+AUTO_ENROLL_MAX_ROLL = float(os.environ.get("AUTO_ENROLL_MAX_ROLL", "25.0"))
+AUTO_ENROLL_NEAR_DUPLICATE_THRESHOLD = float(os.environ.get("AUTO_ENROLL_NEAR_DUPLICATE_THRESHOLD", "0.92"))
+AUTO_ENROLL_SAMPLES_PER_BUCKET = int(os.environ.get("AUTO_ENROLL_SAMPLES_PER_BUCKET", "10"))
+AUTO_ENROLL_MAX_TOTAL_SAMPLES = int(os.environ.get("AUTO_ENROLL_MAX_TOTAL_SAMPLES", "120"))
+AUTO_ENROLL_SAMPLE_INTERVAL_SEC = float(os.environ.get("AUTO_ENROLL_SAMPLE_INTERVAL_SEC", "0.4"))
+AUTO_ENROLL_BUFFER_SECONDS = float(os.environ.get("AUTO_ENROLL_BUFFER_SECONDS", "8.0"))
+AUTO_ENROLL_MIN_BRIGHTNESS = int(os.environ.get("AUTO_ENROLL_MIN_BRIGHTNESS", "40"))
+AUTO_ENROLL_MAX_BRIGHTNESS = int(os.environ.get("AUTO_ENROLL_MAX_BRIGHTNESS", "220"))
+AUTO_ENROLL_STORE_CROPS = os.environ.get("AUTO_ENROLL_STORE_CROPS", "false").lower() == "true"

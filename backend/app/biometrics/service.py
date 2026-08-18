@@ -26,8 +26,18 @@ from ..config import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TOLERANCE,
     MODEL_PATH,
+    AUTO_ENROLL_ENABLED,
+    AUTO_ENROLL_SAMPLE_INTERVAL_SEC,
 )
 from ..storage.roster_storage import PersonProfile, RosterStorage
+from .frame_quality import (
+    run_quality_checks,
+    classify_pose_bucket,
+    classify_lighting_bucket,
+    compute_quality_score,
+)
+from .profile_manager import ProfileManager
+from .enrollment_logger import EnrollmentLogger
 from .recognizer import (
     DetectionResult,
     FaceRecognizer,
@@ -121,6 +131,11 @@ class RecognitionService:
         # >>> feed switches from local webcam to the remote capture device.
         self._remote_active: bool = False
         self._remote_last_seen: float = 0.0  # time.monotonic() of last frame
+
+        # Auto-Enrollment state
+        self._profile_manager = ProfileManager(self.storage)
+        self._enrollment_logger = EnrollmentLogger()
+        self._last_enrollment_sample_time: float = 0.0
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
@@ -390,6 +405,13 @@ class RecognitionService:
                 match_id = self._recognizer._process_frame(frame)
                 self._recognizer._update_state(match_id)
 
+                # Auto-Enrollment Pipeline
+                if AUTO_ENROLL_ENABLED and self._recognizer.confirmed_person:
+                    person_id = self._recognizer.confirmed_person
+                    if now - self._last_enrollment_sample_time >= AUTO_ENROLL_SAMPLE_INTERVAL_SEC:
+                        self._last_enrollment_sample_time = now
+                        self._run_auto_enrollment_pipeline(person_id, frame, self._recognizer.last_detection)
+
         except Exception as e:
             logger.error("Error in recognition loop: %s", e, exc_info=True)
         finally:
@@ -549,3 +571,79 @@ class RecognitionService:
     def simulate_unrecognized(self) -> None:
         logger.info("Simulating departure.")
         self._on_unrecognized()
+
+    def _run_auto_enrollment_pipeline(self, person_id: str, frame: np.ndarray, detection: Optional[DetectionResult]) -> None:
+        if not detection or detection.landmarks_3d is None or not detection.bbox:
+            return
+
+        ok, reason, metrics = run_quality_checks(
+            frame,
+            detection.landmarks_3d,
+            detection.confidence,
+            detection.bbox
+        )
+
+        if not ok:
+            self._enrollment_logger.log_decision(
+                person_id=person_id,
+                decision="rejected",
+                reason=reason,
+                **metrics
+            )
+            return
+
+        xmin, ymin, xmax, ymax = detection.bbox
+        h, w = frame.shape[:2]
+        crop_xmin = max(0, xmin)
+        crop_ymin = max(0, ymin)
+        crop_xmax = min(w, xmax)
+        crop_ymax = min(h, ymax)
+        face_crop = frame[crop_ymin:crop_ymax, crop_xmin:crop_xmax]
+
+        if face_crop.size == 0:
+            return
+
+        pose = classify_pose_bucket(metrics["yaw"], metrics["pitch"]).value
+        lighting = classify_lighting_bucket(face_crop).value
+
+        quality_score = compute_quality_score(
+            metrics["sharpness"],
+            metrics["face_min_side"],
+            metrics["detection_score"],
+            metrics["brightness"],
+        )
+
+        encoding = compute_encoding(frame, self._recognizer._landmarker)
+        if encoding is None:
+            return
+
+        enroll, enroll_reason, replace_id = self._profile_manager.should_enroll(
+            person_id=person_id,
+            embedding=encoding.tolist(),
+            pose_bucket=pose,
+            lighting_bucket=lighting,
+            quality_score=quality_score,
+        )
+
+        if enroll:
+            self._profile_manager.enroll_sample(
+                person_id=person_id,
+                embedding=encoding.tolist(),
+                pose_bucket=pose,
+                lighting_bucket=lighting,
+                quality_score=quality_score,
+                face_crop_bgr=face_crop,
+                replace_sample_id=replace_id,
+            )
+            self.reload_roster()
+
+        self._enrollment_logger.log_decision(
+            person_id=person_id,
+            decision="accepted" if enroll else "rejected",
+            reason=enroll_reason,
+            quality_score=quality_score,
+            pose_bucket=pose,
+            lighting_bucket=lighting,
+            replaced_sample_id=replace_id,
+            **metrics
+        )

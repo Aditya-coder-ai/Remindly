@@ -275,3 +275,22 @@ class RosterStorage:
             self._save()
             return True
         return False
+
+    def replace_encoding(self, person_id: str, old_index: int, new_encoding: np.ndarray) -> bool:
+        """Replace a specific encoding at the given index with a new one."""
+        p = self._profiles.get(person_id)
+        if not p:
+            return False
+        if old_index < 0 or old_index >= len(p.encodings):
+            return False
+        p.encodings[old_index] = new_encoding.tolist()
+        self._save()
+        return True
+
+    def get_encoding_count(self, person_id: str) -> int:
+        """Return the number of face encodings stored for a person."""
+        p = self._profiles.get(person_id)
+        if not p:
+            return 0
+        return len(p.encodings)
+

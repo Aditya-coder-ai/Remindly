@@ -156,6 +156,37 @@ def clear_encodings(person_id: str):
     return {"success": True, "person_id": person_id, "encodings_count": 0}
 
 
+@app.get("/api/face_profile/{person_id}")
+def get_face_profile_coverage(person_id: str):
+    """Return bucket coverage report for a person's auto-enrolled face profile."""
+    report = recognition_service._profile_manager.get_coverage_report(person_id)
+    if report["total_samples"] == 0 and not storage.get_profile(person_id):
+        raise HTTPException(status_code=404, detail="Person not found")
+    return {"success": True, "report": report}
+
+
+@app.delete("/api/face_profile/{person_id}")
+def delete_face_profile(person_id: str):
+    """Complete profile erasure (right to erasure)."""
+    # Delete managed samples and encodings
+    deleted = recognition_service._profile_manager.delete_profile(person_id)
+    # Also delete audit log entries
+    logs_removed = recognition_service._enrollment_logger.delete_person_entries(person_id)
+    
+    if not deleted and logs_removed == 0:
+        raise HTTPException(status_code=404, detail="Person face profile not found")
+        
+    recognition_service.reload_roster()
+    return {"success": True, "person_id": person_id, "samples_deleted": True, "audit_entries_removed": logs_removed}
+
+
+@app.get("/api/enrollment_log")
+def get_enrollment_log(person_id: Optional[str] = None, limit: int = 100):
+    """Return recent auto-enrollment audit log entries."""
+    entries = recognition_service._enrollment_logger.get_recent_entries(limit=limit, person_id=person_id)
+    return {"success": True, "entries": entries}
+
+
 @app.post("/api/update_note")
 def update_note(payload: UpdateNoteInput):
     """Save synthesized memory note after a visit completes."""
