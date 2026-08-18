@@ -588,7 +588,14 @@ class RecognitionService:
                 person_id=person_id,
                 decision="rejected",
                 reason=reason,
-                **metrics
+                sharpness=metrics.get("sharpness"),
+                face_size_px=metrics.get("face_min_side"),
+                yaw=metrics.get("yaw"),
+                pitch=metrics.get("pitch"),
+                roll=metrics.get("roll"),
+                brightness=metrics.get("brightness"),
+                detection_score=metrics.get("detection_score"),
+                extra=metrics,
             )
             return
 
@@ -645,5 +652,12 @@ class RecognitionService:
             pose_bucket=pose,
             lighting_bucket=lighting,
             replaced_sample_id=replace_id,
-            **metrics
+            sharpness=metrics.get("sharpness"),
+            face_size_px=metrics.get("face_min_side"),
+            yaw=metrics.get("yaw"),
+            pitch=metrics.get("pitch"),
+            roll=metrics.get("roll"),
+            brightness=metrics.get("brightness"),
+            detection_score=metrics.get("detection_score"),
+            extra=metrics,
         )
