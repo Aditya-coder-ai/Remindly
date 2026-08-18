@@ -55,13 +55,14 @@ Anchor/
    pip install -r backend/requirements.txt
    ```
 
-2. (Optional) Set your Groq API key for AI visit note synthesis:
-   ```bash
-   # PowerShell
-   $env:GROQ_API_KEY="your-groq-api-key"
+2. Configure your environment variables:
+   Create a `.env` file in the root of the project with the following (fill in your own keys):
+   ```env
+   # Database Configuration
+   DATABASE_URL="postgresql://postgres.srwfhjckjgglsmwnevpq:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 
-   # Bash
-   export GROQ_API_KEY="your-groq-api-key"
+   # AI Synthesis API Key (Groq)
+   GROQ_API_KEY="your-groq-api-key"
    ```
 
 3. Run the backend server:
