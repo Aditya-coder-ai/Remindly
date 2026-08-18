@@ -103,6 +103,7 @@ class DetectionResult:
     distance: float
     bbox: Optional[Tuple[int, int, int, int]] = None  # (xmin, ymin, xmax, ymax) in pixels
     keypoints: List[Tuple[int, int]] = field(default_factory=list)
+    landmarks_3d: Optional[NDArray[np.float64]] = None
 
 
 @dataclass
@@ -507,6 +508,7 @@ class FaceRecognizer:
             distance=best_dist,
             bbox=bbox,
             keypoints=keypoints,
+            landmarks_3d=coords,
         )
         self.last_detection = det
         return det
