@@ -9,6 +9,12 @@ and real-time event streaming for Anchor dementia-care companion.
 from __future__ import annotations
 
 import asyncio
+import sys
+
+# Fix psycopg async compatibility on Windows
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import json
 import logging
 import os
@@ -41,8 +47,12 @@ from .schemas.models import (
     RegisterFaceInput,
     SimulateInput,
     UpdateNoteInput,
+    MemoryCreateInput,
+    MemorySearchInput,
+    MemorySearchResponse,
 )
 from .storage.roster_storage import RosterStorage
+from .storage.memory_storage import memory_storage
 from .biometrics.service import RecognitionService
 
 logging.basicConfig(
@@ -59,6 +69,12 @@ recognition_service = RecognitionService(storage=storage)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize long-term memory database (pgvector)
+    try:
+        await memory_storage.init_db()
+    except Exception as e:
+        logger.error(f"Failed to initialize memory storage: {e}")
+
     # Set event loop for thread-safe websocket broadcasts
     loop = asyncio.get_running_loop()
     recognition_service.set_event_loop(loop)
@@ -178,6 +194,59 @@ def simulate_event(payload: SimulateInput):
         return {"success": True, "simulated": "leave"}
     else:
         raise HTTPException(status_code=400, detail="Invalid action; use 'arrive' or 'leave'")
+
+
+@app.post("/api/memories")
+async def create_memory(payload: MemoryCreateInput):
+    """Generate embedding and store a long-term memory."""
+    try:
+        mem = await memory_storage.add_memory(
+            patient_id=payload.patient_id,
+            visit_id=payload.visit_id,
+            memory_type=payload.memory_type,
+            content=payload.content,
+            importance=payload.importance,
+            confidence=payload.confidence,
+        )
+        if not mem:
+            return JSONResponse(
+                status_code=400, 
+                content={"success": False, "error": "Memory rejected (too short, trivial, or low confidence)."}
+            )
+        # Convert UUID to string for JSON serialization
+        mem["id"] = str(mem["id"])
+        if mem.get("created_at"):
+            mem["created_at"] = mem["created_at"].isoformat()
+            
+        return {"success": True, "memory": mem}
+    except Exception as e:
+        logger.error(f"Error creating memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/memories/search", response_model=MemorySearchResponse)
+async def search_memories(payload: MemorySearchInput):
+    """Retrieve semantically relevant memories via vector search."""
+    try:
+        results = await memory_storage.search_memories(
+            patient_id=payload.patient_id,
+            query=payload.query,
+            limit=payload.limit
+        )
+        formatted_results = []
+        for r in results:
+            formatted_results.append({
+                "id": str(r["id"]),
+                "content": r["content"],
+                "memory_type": r["memory_type"],
+                "importance": r["importance"],
+                "confidence": r["confidence"],
+                "similarity": r["similarity"]
+            })
+        return MemorySearchResponse(results=formatted_results)
+    except Exception as e:
+        logger.error(f"Error searching memories: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

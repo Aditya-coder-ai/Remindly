@@ -41,3 +41,31 @@ class GroqProxyInput(BaseModel):
     messages: List[Dict[str, Any]]
     max_tokens: Optional[int] = 60
     temperature: Optional[float] = 0.7
+
+
+class MemoryCreateInput(BaseModel):
+    patient_id: str
+    visit_id: Optional[str] = None
+    memory_type: Optional[str] = None
+    content: str
+    importance: float = 0.5
+    confidence: float = 1.0
+
+
+class MemorySearchInput(BaseModel):
+    patient_id: str
+    query: str
+    limit: int = 5
+
+
+class MemorySearchResult(BaseModel):
+    id: str
+    content: str
+    memory_type: Optional[str] = None
+    importance: Optional[float] = None
+    confidence: Optional[float] = None
+    similarity: float
+
+
+class MemorySearchResponse(BaseModel):
+    results: List[MemorySearchResult]

@@ -9,11 +9,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Base directory for backend
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BACKEND_DIR.parent
+
+# Load environment variables from .env if present
+load_dotenv(ROOT_DIR / ".env")
 
 # Data and Model paths
 DATA_DIR = Path(os.environ.get("ANCHOR_DATA_DIR", BACKEND_DIR / "data"))
@@ -23,6 +27,9 @@ MODEL_PATH = str(APP_DIR / "biometrics" / "models" / "face_landmarker.task")
 # Frontend production distribution path
 FRONTEND_DIST_DIR = ROOT_DIR / "frontend" / "dist"
 STATIC_DIR = APP_DIR / "static"
+
+# Database Settings
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/anchor")
 
 # Server Network Settings
 PORT = int(os.environ.get("PORT", 8000))
