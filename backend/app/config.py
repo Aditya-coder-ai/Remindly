@@ -35,12 +35,14 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 PORT = int(os.environ.get("PORT", 8000))
 HOST = os.environ.get("HOST", "0.0.0.0")
 
-# Security & CORS: Restrict API access strictly to local companion clients
+# Security & CORS
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://*.onrender.com",
+    "*",
 ]
 
 # External AI Proxy Settings (Groq)
