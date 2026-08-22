@@ -25,10 +25,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+import uuid
+import datetime
 
 from .config import (
     ALLOWED_GROQ_KEYS,
@@ -53,6 +55,7 @@ from .schemas.models import (
 )
 from .storage.roster_storage import RosterStorage
 from .storage.memory_storage import memory_storage
+from .storage.visit_storage import visit_storage
 from .biometrics.service import RecognitionService
 
 logging.basicConfig(
@@ -72,6 +75,7 @@ async def lifespan(app: FastAPI):
     # Initialize long-term memory database (pgvector)
     try:
         await memory_storage.init_db()
+        await visit_storage.init_db()
     except Exception as e:
         logger.error(f"Failed to initialize memory storage: {e}")
 
@@ -278,6 +282,99 @@ async def search_memories(payload: MemorySearchInput):
     except Exception as e:
         logger.error(f"Error searching memories: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Structured Conversation Memory Audio Upload
+# ---------------------------------------------------------------------------
+
+async def background_process_visit(
+    visit_id: str,
+    temp_audio_path: str,
+    person_id: str,
+    started_at: str,
+    ended_at: str
+):
+    from .services.visit_pipeline import process_visit_audio
+    from .storage.visit_storage import visit_storage
+    from .storage.roster_storage import RosterStorage
+    
+    try:
+        logger.info(f"Starting background processing for visit {visit_id}...")
+        # Process the audio to generate a VisitRecord
+        record = await process_visit_audio(
+            visit_id=visit_id,
+            audio_path=temp_audio_path,
+            visitor_id=person_id,
+            started_at=started_at,
+            ended_at=ended_at
+        )
+        
+        # Save to database
+        success = await visit_storage.add_visit(record)
+        if success:
+            logger.info(f"Successfully processed and stored visit {visit_id}.")
+            # Also update the roster profile note with the new patient-facing summary
+            storage = RosterStorage()
+            profile = storage.get_profile(person_id)
+            if profile:
+                profile = storage.update_note(person_id, record.patient_summary, "")
+                # Broadcast memory updated so UI refreshes
+                from .biometrics.service import RecognitionService
+                # Recognition service singleton is bound to main, but we can't easily import the instance here due to circular deps if we aren't careful,
+                # but since we are in main.py, we can just use the global `recognition_service` directly.
+                recognition_service.broadcast_event({
+                    "type": "memory_updated",
+                    "person": profile.to_dict(),
+                    "note": record.patient_summary,
+                })
+        else:
+            logger.error(f"Failed to save visit record {visit_id} to database.")
+            
+    except Exception as e:
+        logger.error(f"Error in background processing for visit {visit_id}: {e}")
+    finally:
+        # Retention Policy: Delete raw audio immediately after processing (RETENTION_AUDIO_DAYS = 0)
+        from .config import RETENTION_AUDIO_DAYS
+        if RETENTION_AUDIO_DAYS <= 0:
+            try:
+                if os.path.exists(temp_audio_path):
+                    os.remove(temp_audio_path)
+                    logger.info(f"Deleted raw audio file for visit {visit_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete temp audio file: {e}")
+
+@app.post("/api/visits/audio")
+async def upload_visit_audio(
+    background_tasks: BackgroundTasks,
+    audio: UploadFile = File(...),
+    person_id: str = Form(...),
+    started_at: str = Form(...),
+    ended_at: str = Form(...)
+):
+    """Receive visit audio, start async processing, and return immediately."""
+    visit_id = str(uuid.uuid4())
+    temp_dir = Path(os.environ.get("TEMP", "/tmp")) / "anchor_visits"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_audio_path = temp_dir / f"{visit_id}_{audio.filename}"
+    
+    try:
+        with open(temp_audio_path, "wb") as buffer:
+            buffer.write(await audio.read())
+    except Exception as e:
+        logger.error(f"Failed to save uploaded audio: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save audio file")
+        
+    background_tasks.add_task(
+        background_process_visit,
+        visit_id=visit_id,
+        temp_audio_path=str(temp_audio_path),
+        person_id=person_id,
+        started_at=started_at,
+        ended_at=ended_at
+    )
+    
+    return {"success": True, "visit_id": visit_id, "status": "processing"}
 
 
 # ---------------------------------------------------------------------------

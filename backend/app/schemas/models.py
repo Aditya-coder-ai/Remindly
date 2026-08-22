@@ -69,3 +69,48 @@ class MemorySearchResult(BaseModel):
 
 class MemorySearchResponse(BaseModel):
     results: List[MemorySearchResult]
+
+
+class StructuredEvent(BaseModel):
+    description: str
+    who: str
+    when_mentioned: str
+
+
+class FollowUp(BaseModel):
+    description: str
+    due: Optional[str] = None
+    owner: str = Field(..., description="'patient', 'caregiver', or 'family'")
+
+
+class Sentiment(BaseModel):
+    overall: str = Field(..., description="'positive', 'neutral', 'negative', or 'mixed'")
+    notes: str
+
+
+class StructuredExtractionOutput(BaseModel):
+    topics: List[str]
+    events: List[StructuredEvent]
+    follow_ups: List[FollowUp]
+    sentiment: Sentiment
+    context: str
+
+
+class Participant(BaseModel):
+    name: str
+    role: str
+
+
+class VisitRecord(BaseModel):
+    visit_id: str
+    patient_id: str
+    started_at: str
+    ended_at: str
+    participants: List[Participant]
+    transcript_ref: str
+    topics: List[str]
+    events: List[StructuredEvent]
+    follow_ups: List[FollowUp]
+    sentiment: Sentiment
+    context: str
+    patient_summary: str

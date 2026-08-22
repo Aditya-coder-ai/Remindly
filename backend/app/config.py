@@ -75,3 +75,13 @@ AUTO_ENROLL_BUFFER_SECONDS = float(os.environ.get("AUTO_ENROLL_BUFFER_SECONDS", 
 AUTO_ENROLL_MIN_BRIGHTNESS = int(os.environ.get("AUTO_ENROLL_MIN_BRIGHTNESS", "40"))
 AUTO_ENROLL_MAX_BRIGHTNESS = int(os.environ.get("AUTO_ENROLL_MAX_BRIGHTNESS", "220"))
 AUTO_ENROLL_STORE_CROPS = os.environ.get("AUTO_ENROLL_STORE_CROPS", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# Structured Conversation Memory Pipeline
+# ---------------------------------------------------------------------------
+MAX_SUMMARY_LENGTH = int(os.environ.get("MAX_SUMMARY_LENGTH", "30"))
+ENABLE_DIARIZATION = os.environ.get("ENABLE_DIARIZATION", "true").lower() == "true"
+RETENTION_AUDIO_DAYS = int(os.environ.get("RETENTION_AUDIO_DAYS", "0"))
+RETENTION_TRANSCRIPT_DAYS = int(os.environ.get("RETENTION_TRANSCRIPT_DAYS", "90"))
+RETENTION_RECORD_DAYS = int(os.environ.get("RETENTION_RECORD_DAYS", "3650"))
+PATIENT_DEFAULT_UUID = os.environ.get("PATIENT_DEFAULT_UUID", "00000000-0000-0000-0000-000000000001")

@@ -1,136 +1,111 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { summarizeConversation } from "../services/summarize.js";
 
 /**
- * useConversationMemory — Captures speech via Web Speech API and summarizes on leave.
+ * useConversationMemory — Captures audio via MediaRecorder and uploads to backend on leave.
  */
 export function useConversationMemory() {
   const [isCapturing, setIsCapturing] = useState(false);
-  const [transcript, setTranscript] = useState("");
   const [statusMessage, setStatusMessage] = useState("Ready");
 
-  const recognitionRef = useRef(null);
-  const transcriptLinesRef = useRef([]);
-  const isCapturingRef = useRef(false);
-
-  const updateTranscriptState = useCallback(() => {
-    setTranscript(transcriptLinesRef.current.join(" ").trim());
-  }, []);
-
-  const appendTranscript = useCallback((text) => {
-    const line = (text || "").trim();
-    if (!line) return;
-    transcriptLinesRef.current.push(line);
-    updateTranscriptState();
-    setStatusMessage(`Transcript: "${line}"`);
-  }, [updateTranscriptState]);
-
-  const resetTranscript = useCallback(() => {
-    transcriptLinesRef.current = [];
-    updateTranscriptState();
-  }, [updateTranscriptState]);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const visitStartTimeRef = useRef(null);
 
   const stopListening = useCallback(() => {
-    isCapturingRef.current = false;
-    setIsCapturing(false);
-    if (recognitionRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
-        recognitionRef.current.stop();
-      } catch {
-        /* already stopped */
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.error("Error stopping media recorder", e);
       }
-      recognitionRef.current = null;
     }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setIsCapturing(false);
   }, []);
 
-  const startCapture = useCallback(({ name } = {}) => {
-    if (isCapturingRef.current) {
+  const startCapture = useCallback(async ({ name } = {}) => {
+    if (isCapturing) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatusMessage("Audio capture not supported in this browser.");
       return;
     }
-
-    if (
-      typeof window === "undefined" ||
-      !(window.SpeechRecognition || window.webkitSpeechRecognition)
-    ) {
-      setStatusMessage("Web Speech API not available — use Chrome over http://localhost or https.");
-      return;
-    }
-
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new Recognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          const utterance = result[0].transcript.trim();
-          if (utterance) {
-            transcriptLinesRef.current.push(utterance);
-            updateTranscriptState();
-            setStatusMessage(`Heard: "${utterance}"`);
-          }
-        }
-      }
-    };
-
-    recognition.onerror = (event) => {
-      if (event.error === "no-speech") {
-        setStatusMessage("No speech detected — still listening…");
-      } else if (
-        event.error === "not-allowed" ||
-        event.error === "service-not-allowed"
-      ) {
-        stopListening();
-        setStatusMessage(`Microphone permission denied (${event.error}).`);
-      } else {
-        setStatusMessage(`Speech error (${event.error}).`);
-      }
-    };
-
-    recognition.onend = () => {
-      if (isCapturingRef.current) {
-        try {
-          recognition.start();
-        } catch (err) {
-          setStatusMessage(`Failed to resume capture: ${err.message}`);
-        }
-      }
-    };
-
-    recognitionRef.current = recognition;
-    isCapturingRef.current = true;
-    setIsCapturing(true);
 
     try {
-      recognition.start();
-      setStatusMessage(`Listening — ${name || "visitor"} is here.`);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      visitStartTimeRef.current = new Date().toISOString();
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(1000); // collect data every second
+      setIsCapturing(true);
+      setStatusMessage(`Recording audio — ${name || "visitor"} is here.`);
     } catch (err) {
-      isCapturingRef.current = false;
       setIsCapturing(false);
-      setStatusMessage(`Could not start capture: ${err.message}`);
+      setStatusMessage(`Could not start audio capture: ${err.message}`);
     }
-  }, [stopListening, updateTranscriptState]);
+  }, [isCapturing]);
 
   const stopCaptureAndSummarize = useCallback(async (person) => {
-    stopListening();
-    setStatusMessage("Visit ended — building memory note…");
-    const currentFullTranscript = transcriptLinesRef.current.join(" ").trim();
-    const summary = await summarizeConversation(person, currentFullTranscript);
+    if (!mediaRecorderRef.current) return null;
     
-    transcriptLinesRef.current = [];
-    updateTranscriptState();
+    setStatusMessage("Visit ended — processing audio...");
+    
+    return new Promise((resolve) => {
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioChunksRef.current = [];
+        
+        if (audioBlob.size === 0) {
+          setStatusMessage("No audio captured.");
+          resolve(null);
+          return;
+        }
 
-    if (summary) {
-      setStatusMessage(`Memory updated for ${person?.name || "visitor"}: "${summary}"`);
-    } else {
-      setStatusMessage("No meaningful speech this visit — previous note kept.");
-    }
-    return summary;
-  }, [stopListening, updateTranscriptState]);
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "visit_audio.webm");
+        formData.append("person_id", person?.person_id || "unknown");
+        formData.append("started_at", visitStartTimeRef.current);
+        formData.append("ended_at", new Date().toISOString());
+
+        try {
+          const response = await fetch("/api/visits/audio", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (response.ok) {
+            setStatusMessage(`Audio uploaded successfully for processing.`);
+            resolve("Processing audio...");
+          } else {
+            const err = await response.text();
+            setStatusMessage(`Upload failed: ${err}`);
+            resolve(null);
+          }
+        } catch (error) {
+          setStatusMessage(`Network error during upload: ${error.message}`);
+          resolve(null);
+        }
+      };
+      
+      stopListening();
+    });
+  }, [stopListening]);
 
   useEffect(() => {
     return () => {
@@ -140,11 +115,11 @@ export function useConversationMemory() {
 
   return {
     isCapturing,
-    transcript,
+    transcript: "(Transcribing in backend...)",
     statusMessage,
     startCapture,
     stopCaptureAndSummarize,
-    appendTranscript,
-    resetTranscript,
+    appendTranscript: () => {},
+    resetTranscript: () => {},
   };
 }
