@@ -5,81 +5,9 @@
     "relationship": "friend",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 04:22 AM",
+    "note": "Processing audio...",
+    "last_visited": "August 23, 2026, 03:52 AM",
     "history": [
-      {
-        "timestamp": 1787439143.3970704,
-        "date_str": "August 23, 2026, 04:22 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787439142.761922,
-        "date_str": "August 23, 2026, 04:22 AM",
-        "note": "You have a nice visit today. You talk with caring people and feel comfortable. We look forward to seeing you again.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438889.7369862,
-        "date_str": "August 23, 2026, 04:18 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438889.307865,
-        "date_str": "August 23, 2026, 04:18 AM",
-        "note": "You have a pleasant visit, and we share a warm greeting together.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438632.3016632,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438631.802928,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You have a nice visit today. We talked, shared smiles, and hope you feel happy and comfortable.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438609.0656292,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438609.0348573,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a pleasant visit with a caring friend. You felt relaxed and smiled.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438599.0018969,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438595.5435653,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a pleasant visit, and we enjoyed watching together. Now we are moving on to the next video.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438302.367227,
-        "date_str": "August 23, 2026, 04:08 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438300.868967,
-        "date_str": "August 23, 2026, 04:08 AM",
-        "note": "You had a nice visit, sharing a friendly chat and a warm smile together.",
-        "transcript": ""
-      },
       {
         "timestamp": 1787437375.2735727,
         "date_str": "August 23, 2026, 03:52 AM",
@@ -1974,128 +1902,110 @@
     "relationship": "Visitor",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You had a pleasant visit and we shared a friendly chat together. Now we’re moving on to the next topic.",
-    "last_visited": "August 23, 2026, 04:25 AM",
+    "note": "You had a nice visit today.",
+    "last_visited": "August 23, 2026, 04:31 AM",
     "history": [
       {
-        "timestamp": 1787439312.422276,
-        "date_str": "August 23, 2026, 04:25 AM",
-        "note": "You had a pleasant visit and we shared a friendly chat together. Now we’re moving on to the next topic.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787439310.8360157,
-        "date_str": "August 23, 2026, 04:25 AM",
+        "timestamp": 1787439689.045951,
+        "date_str": "August 23, 2026, 04:31 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787439290.6302805,
-        "date_str": "August 23, 2026, 04:24 AM",
-        "note": "You had a nice visit today.",
+        "timestamp": 1787439688.9878278,
+        "date_str": "August 23, 2026, 04:31 AM",
+        "note": "You are having a nice visit today. We share a warm chat and a friendly smile.",
         "transcript": ""
       },
       {
-        "timestamp": 1787439284.467904,
-        "date_str": "August 23, 2026, 04:24 AM",
-        "note": "You had a nice visit and said thank you. It feels warm and friendly.",
+        "timestamp": 1787439684.3794665,
+        "date_str": "August 23, 2026, 04:31 AM",
+        "note": "Speaker: Tera Saath Hai",
+        "transcript": "Speaker: Tera Saath Hai"
+      },
+      {
+        "timestamp": 1787438232.0355787,
+        "date_str": "August 23, 2026, 04:07 AM",
+        "note": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni",
+        "transcript": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni"
+      },
+      {
+        "timestamp": 1787438118.608601,
+        "date_str": "August 23, 2026, 04:05 AM",
+        "note": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun",
+        "transcript": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun"
+      },
+      {
+        "timestamp": 1787437438.581727,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
+      },
+      {
+        "timestamp": 1787437438.3222206,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Speaker: Mera Gala Baitha Hua lekin sahi mein acchi khasi Gali de dunga tere ko\nSpeaker: disturb karta hai tu",
+        "transcript": "Speaker: Mera Gala Baitha Hua lekin sahi mein acchi khasi Gali de dunga tere ko\nSpeaker: disturb karta hai tu"
+      },
+      {
+        "timestamp": 1787437414.1948292,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Speaker: give me an analysis report",
+        "transcript": "Speaker: give me an analysis report"
+      },
+      {
+        "timestamp": 1787437413.5395021,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
+      },
+      {
+        "timestamp": 1787437394.6278603,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
         "transcript": ""
       },
       {
-        "timestamp": 1787439241.758139,
-        "date_str": "August 23, 2026, 04:24 AM",
-        "note": "You had a nice visit today.",
+        "timestamp": 1787437394.5762858,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
+      },
+      {
+        "timestamp": 1787437384.851461,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
         "transcript": ""
       },
       {
-        "timestamp": 1787439235.0106997,
-        "date_str": "August 23, 2026, 04:23 AM",
-        "note": "You had a pleasant visit. The speaker says they will go to the next video.",
+        "timestamp": 1787437384.7273006,
+        "date_str": "August 23, 2026, 03:53 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
+      },
+      {
+        "timestamp": 1787437375.4513266,
+        "date_str": "August 23, 2026, 03:52 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
+      },
+      {
+        "timestamp": 1787437375.349627,
+        "date_str": "August 23, 2026, 03:52 AM",
+        "note": "Processing audio...",
         "transcript": ""
       },
       {
-        "timestamp": 1787439071.56853,
-        "date_str": "August 23, 2026, 04:21 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787437360.0671983,
+        "date_str": "August 23, 2026, 03:52 AM",
+        "note": "Processing audio...",
+        "transcript": "(Transcribing in backend...)"
       },
       {
-        "timestamp": 1787439071.3676007,
-        "date_str": "August 23, 2026, 04:21 AM",
-        "note": "You have a nice visit today, you smile and say yes. It feels pleasant together.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787439005.9677129,
-        "date_str": "August 23, 2026, 04:20 AM",
-        "note": "You have a nice visit today. We talk and share a smile. I hope you feel comfortable and cared for.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787439005.9414768,
-        "date_str": "August 23, 2026, 04:20 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438942.5225937,
-        "date_str": "August 23, 2026, 04:19 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438942.5036743,
-        "date_str": "August 23, 2026, 04:19 AM",
-        "note": "You had a pleasant visit, and now we’re moving on to the next thing together.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438857.3148692,
-        "date_str": "August 23, 2026, 04:17 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438855.2208407,
-        "date_str": "August 23, 2026, 04:17 AM",
-        "note": "You have a nice visit today. We talk and share smiles. I look forward to seeing you again soon.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438840.0211983,
-        "date_str": "August 23, 2026, 04:17 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438837.8627243,
-        "date_str": "August 23, 2026, 04:17 AM",
-        "note": "You have a nice visit today. We talk and share a smile. I look forward to seeing you again soon.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438622.7377796,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438621.8145719,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You have a nice visit today, talking and smiling with the staff. We hope you feel comfortable and cared for.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438601.8709126,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787438599.1943629,
-        "date_str": "August 23, 2026, 04:13 AM",
-        "note": "You have a nice visit, and you say you’d like to go to the next activity.",
-        "transcript": ""
+        "timestamp": 1787437297.0612023,
+        "date_str": "August 23, 2026, 03:51 AM",
+        "note": "Speaker: light ka reflection",
+        "transcript": "Speaker: light ka reflection"
       }
     ],
     "encodings": [
@@ -2724,23 +2634,5 @@
         0.006510988498198633
       ]
     ]
-  },
-  {
-    "person_id": "grandma_anna",
-    "name": "Anna Jenkins",
-    "relationship": "Grandmother",
-    "avatar_color": "#2f6f4f",
-    "avatar_url": null,
-    "note": "Anna and you watered the balcony sunflowers together.",
-    "last_visited": "August 23, 2026, 04:08 AM",
-    "history": [
-      {
-        "timestamp": 1787438305.453683,
-        "date_str": "August 23, 2026, 04:08 AM",
-        "note": "Anna and you watered the balcony sunflowers together.",
-        "transcript": "Let's water these lovely flowers today."
-      }
-    ],
-    "encodings": []
   }
 ]
