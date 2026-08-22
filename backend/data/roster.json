@@ -1902,9 +1902,33 @@
     "relationship": "Visitor",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "Processing audio...",
-    "last_visited": "August 23, 2026, 03:53 AM",
+    "note": "You had a nice visit today.",
+    "last_visited": "August 23, 2026, 04:07 AM",
     "history": [
+      {
+        "timestamp": 1787438243.6934428,
+        "date_str": "August 23, 2026, 04:07 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787438238.2506886,
+        "date_str": "August 23, 2026, 04:07 AM",
+        "note": "You are having a gentle visit, and you tell me you don’t have any money right now.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787438232.0355787,
+        "date_str": "August 23, 2026, 04:07 AM",
+        "note": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni",
+        "transcript": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni"
+      },
+      {
+        "timestamp": 1787438118.608601,
+        "date_str": "August 23, 2026, 04:05 AM",
+        "note": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun",
+        "transcript": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun"
+      },
       {
         "timestamp": 1787437438.581727,
         "date_str": "August 23, 2026, 03:53 AM",

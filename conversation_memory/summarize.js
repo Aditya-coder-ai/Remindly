@@ -19,10 +19,9 @@
 // Single place to configure the AI call — swap the model/provider here
 // without touching any capture code.
 export const ANCHOR_API_CONFIG = {
-  apiKey: "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",
-  endpoint: "https://api.groq.com/openai/v1/chat/completions",
-  // Fast, free-tier-friendly model; plenty for a one-sentence summary.
-  model: "llama-3.3-70b-versatile",
+  apiKey: "",
+  endpoint: "/api/groq",
+  model: "groq/compound-mini",
   maxTokens: 60,
   temperature: 0.7,
 };
