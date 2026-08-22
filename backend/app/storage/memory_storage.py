@@ -14,7 +14,7 @@ import psycopg
 from psycopg.rows import dict_row
 from pgvector.psycopg import register_vector_async
 
-from ..config import DATABASE_URL
+from ..config import DATABASE_URL, PATIENT_DEFAULT_UUID
 from ..services.embeddings import generate_embedding
 
 logger = logging.getLogger(__name__)
@@ -28,13 +28,32 @@ class MemoryStorage:
 
     async def init_db(self):
         """
-        Ensures the vector extension, memories table, and hnsw index exist.
+        Ensures the vector extension, patients table, memories table, and hnsw index exist,
+        and seeds the default patient record.
         """
         logger.info("Initializing memory database and ensuring pgvector exists...")
         async with await psycopg.AsyncConnection.connect(self.db_url, autocommit=True) as conn:
             # Enable pgvector extension
             await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             
+            # Ensure patients table exists
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS patients (
+                    id text PRIMARY KEY,
+                    name text NOT NULL,
+                    date_of_birth text,
+                    created_at timestamptz DEFAULT now(),
+                    updated_at timestamptz DEFAULT now()
+                );
+            """)
+
+            # Seed default patient if absent
+            await conn.execute("""
+                INSERT INTO patients (id, name)
+                VALUES (%s, %s)
+                ON CONFLICT (id) DO NOTHING;
+            """, (PATIENT_DEFAULT_UUID, "Default Patient"))
+
             # Create memories table
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS memories (
@@ -61,7 +80,7 @@ class MemoryStorage:
                 CREATE INDEX IF NOT EXISTS memories_embedding_idx ON memories 
                 USING hnsw (embedding vector_cosine_ops);
             """)
-            logger.info("Memory database initialization complete.")
+            logger.info(f"Memory database initialization complete with default patient ({PATIENT_DEFAULT_UUID}).")
 
     @asynccontextmanager
     async def get_connection(self):

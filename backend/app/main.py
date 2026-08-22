@@ -52,6 +52,8 @@ from .schemas.models import (
     MemoryCreateInput,
     MemorySearchInput,
     MemorySearchResponse,
+    PatientAskInput,
+    PatientAskResponse,
 )
 from .storage.roster_storage import RosterStorage
 from .storage.memory_storage import memory_storage
@@ -282,6 +284,52 @@ async def search_memories(payload: MemorySearchInput):
     except Exception as e:
         logger.error(f"Error searching memories: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/patient/ask", response_model=PatientAskResponse)
+async def patient_ask(payload: PatientAskInput):
+    """Answer a patient's spoken question using memory retrieval + LLM.
+
+    Privacy: receives ONLY text (question, person_id, patient_id).
+    No camera frames, face embeddings, or biometric data.
+    """
+    from .services.patient_responder import generate_patient_response
+
+    person_name = "your visitor"
+    relationship = "visitor"
+    recent_note = None
+
+    if payload.person_id:
+        profile = storage.get_profile(payload.person_id)
+        if profile:
+            person_name = profile.name or person_name
+            relationship = profile.relationship or relationship
+            recent_note = profile.note
+
+    # Retrieve relevant memories via semantic search
+    relevant_memories = []
+    memories_used = 0
+    try:
+        results = await memory_storage.search_memories(
+            patient_id=payload.patient_id,
+            query=payload.question,
+            limit=3,
+        )
+        relevant_memories = [r["content"] for r in results if r.get("content")]
+        memories_used = len(relevant_memories)
+    except Exception as e:
+        logger.warning(f"Memory search failed for patient question (non-fatal): {e}")
+
+    answer = await generate_patient_response(
+        question=payload.question,
+        person_name=person_name,
+        relationship=relationship,
+        relevant_memories=relevant_memories,
+        recent_note=recent_note,
+    )
+
+    logger.info("PATIENT_QUERY: '%s' -> '%s' (memories=%d)", payload.question, answer, memories_used)
+    return PatientAskResponse(answer=answer, memories_used=memories_used)
 
 
 # ---------------------------------------------------------------------------
@@ -596,8 +644,16 @@ async def root_index():
 
 
 if __name__ == "__main__":
+    import selectors
+    selector = selectors.SelectSelector()
+    loop = asyncio.SelectorEventLoop(selector)
+    asyncio.set_event_loop(loop)
+
     print(f"\n{'='*60}")
     print(f"  Anchor — Dementia Care Companion Backend")
     print(f"  Listening on http://localhost:{PORT}")
     print(f"{'='*60}\n")
-    uvicorn.run(app, host=HOST, port=PORT)
+
+    config = uvicorn.Config(app=app, host=HOST, port=PORT, loop="asyncio")
+    server = uvicorn.Server(config)
+    loop.run_until_complete(server.serve())

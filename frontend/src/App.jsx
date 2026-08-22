@@ -6,10 +6,23 @@ import { useWebSocket } from "./hooks/useWebSocket.js";
 import { useConversationMemory } from "./hooks/useConversationMemory.js";
 import { useRoster } from "./hooks/useRoster.js";
 
+// Default TTS / interaction settings (caregiver-configurable)
+const DEFAULT_TTS_SETTINGS = {
+  ttsEnabled: true,
+  interactionEnabled: true,
+  autoListenEnabled: true,
+  rate: 0.85,
+  pitch: 1.0,
+  volume: 1.0,
+  language: "en-US",
+  voiceName: null,
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState("patient");
   const [activePerson, setActivePerson] = useState(null);
   const activePersonRef = useRef(null);
+  const [ttsSettings, setTtsSettings] = useState(DEFAULT_TTS_SETTINGS);
 
   const {
     profiles,
@@ -156,7 +169,13 @@ export default function App() {
       {/* Main Content Area */}
       <main className="app-container">
         {activeTab === "patient" ? (
-          <PatientView recognizedPerson={activePerson} speakAloud={true} />
+          <PatientView
+            recognizedPerson={activePerson}
+            speakAloud={ttsSettings.ttsEnabled}
+            ttsSettings={ttsSettings}
+            interactionEnabled={ttsSettings.interactionEnabled}
+            autoListenEnabled={ttsSettings.autoListenEnabled}
+          />
         ) : (
           <CaregiverDashboard
             isVisitorPresent={Boolean(activePerson)}
@@ -173,6 +192,8 @@ export default function App() {
             onDeletePerson={deleteProfile}
             onRegisterFace={registerFace}
             onClearEncodings={clearFaceEncodings}
+            ttsSettings={ttsSettings}
+            onTtsSettingsChange={setTtsSettings}
           />
         )}
       </main>

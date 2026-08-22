@@ -71,6 +71,17 @@ class MemorySearchResponse(BaseModel):
     results: List[MemorySearchResult]
 
 
+class PatientAskInput(BaseModel):
+    question: str = Field(..., description="The patient's transcribed spoken question")
+    person_id: Optional[str] = Field(default=None, description="ID of the currently recognized visitor")
+    patient_id: str = Field(default="00000000-0000-0000-0000-000000000001", description="Patient UUID")
+
+
+class PatientAskResponse(BaseModel):
+    answer: str = Field(..., description="Dementia-friendly response for TTS")
+    memories_used: int = Field(default=0, description="Number of memories consulted")
+
+
 class StructuredEvent(BaseModel):
     description: str
     who: str

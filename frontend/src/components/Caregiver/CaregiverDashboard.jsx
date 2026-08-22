@@ -20,6 +20,8 @@ export default function CaregiverDashboard({
   onDeletePerson,
   onRegisterFace,
   onClearEncodings,
+  ttsSettings,
+  onTtsSettingsChange,
 }) {
   const visitorName = activePerson?.name || "None";
 
@@ -56,7 +58,7 @@ export default function CaregiverDashboard({
 
         <WearableCamera />
 
-        <AiSettings />
+        <AiSettings ttsSettings={ttsSettings} onTtsSettingsChange={onTtsSettingsChange} />
       </div>
     </section>
   );

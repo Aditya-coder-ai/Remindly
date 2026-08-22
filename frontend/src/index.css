@@ -840,7 +840,6 @@ textarea {
   display: none !important;
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -852,5 +851,154 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+/* ==========================================================================
+   Patient Interaction States — TTS / STT / Conversation Loop
+   ========================================================================== */
+
+/* Listening state: gentle pulse on the indicator row */
+.listening-indicator-row.interaction-listening .soundwave-anim span {
+  animation-duration: 0.6s;
+}
+
+.listening-indicator-row.interaction-listening {
+  border-left: 3px solid var(--primary);
+  padding-left: 16px;
+}
+
+/* Speaking state: smooth glow */
+.listening-indicator-row.interaction-speaking {
+  border-left: 3px solid var(--amber-warm);
+  padding-left: 16px;
+}
+
+.listening-indicator-row.interaction-speaking .soundwave-anim span {
+  background: var(--amber-warm);
+  animation-duration: 0.4s;
+}
+
+/* Thinking state: pulsing dots */
+.listening-indicator-row.interaction-thinking {
+  border-left: 3px solid var(--text-muted);
+  padding-left: 16px;
+}
+
+.listening-indicator-row.interaction-thinking .soundwave-anim span {
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+  background: var(--text-muted);
+}
+
+@keyframes thinking-pulse {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.listening-indicator-row.interaction-thinking .soundwave-anim span:nth-child(1) { animation-delay: 0s; }
+.listening-indicator-row.interaction-thinking .soundwave-anim span:nth-child(2) { animation-delay: 0.15s; }
+.listening-indicator-row.interaction-thinking .soundwave-anim span:nth-child(3) { animation-delay: 0.3s; }
+.listening-indicator-row.interaction-thinking .soundwave-anim span:nth-child(4) { animation-delay: 0.45s; }
+.listening-indicator-row.interaction-thinking .soundwave-anim span:nth-child(5) { animation-delay: 0.6s; }
+
+/* System Response Card (what Anchor said/is saying) */
+.system-response-card {
+  background: var(--surface);
+  border: var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 18px 22px;
+  margin-top: 16px;
+  animation: fadeSlideIn 0.4s ease-out;
+}
+
+.system-response-text {
+  font-size: 1.35rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+/* Patient Transcript Card (what the patient said) */
+.patient-transcript-card {
+  background: rgba(52, 232, 154, 0.06);
+  border: 1px solid rgba(52, 232, 154, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-top: 12px;
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+.patient-transcript-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.patient-transcript-text {
+  font-size: 1.1rem;
+  color: var(--primary-light);
+  font-style: italic;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Caregiver Toggle Label Styling */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Range slider styling */
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-raised);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: 6px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--surface);
 }
 

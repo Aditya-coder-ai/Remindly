@@ -1,16 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import ClockScreen from "./ClockScreen.jsx";
 import RecognitionCard from "./RecognitionCard.jsx";
+import { usePatientInteraction, STATES } from "../../hooks/usePatientInteraction.js";
 
 const FADE_MS = 700;
 
-export default function PatientView({ recognizedPerson = null, speakAloud = true }) {
+export default function PatientView({
+  recognizedPerson = null,
+  speakAloud = true,
+  ttsSettings = {},
+  interactionEnabled = true,
+  autoListenEnabled = true,
+}) {
   const [cardPerson, setCardPerson] = useState(null);
   const [cardActive, setCardActive] = useState(false);
   const unmountTimer = useRef(null);
 
   const clockActive = cardPerson === null || !cardActive;
 
+  // Patient interaction state machine (TTS + STT + conversation loop)
+  const {
+    state: interactionState,
+    systemResponse,
+    patientTranscript,
+  } = usePatientInteraction({
+    recognizedPerson,
+    ttsEnabled: speakAloud,
+    interactionEnabled,
+    autoListenEnabled,
+  });
+
+  // Card mount/unmount with fade animation
   useEffect(() => {
     if (unmountTimer.current) {
       clearTimeout(unmountTimer.current);
@@ -41,30 +61,23 @@ export default function PatientView({ recognizedPerson = null, speakAloud = true
     };
   }, []);
 
-  // Optional TTS read-aloud
-  useEffect(() => {
-    const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
-    if (!synth) return;
-
-    synth.cancel();
-
-    if (recognizedPerson && speakAloud) {
-      const name = recognizedPerson.name || "A loved one";
-      const rel = recognizedPerson.relationship || "Loved One";
-      const note = recognizedPerson.note || "This is the start of your time together.";
-      const text = `${name}, your ${rel.toLowerCase()}. ${note}`;
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.92;
-      synth.speak(utterance);
-    }
-  }, [recognizedPerson, speakAloud]);
+  // NOTE: The old inline speechSynthesis.speak() useEffect has been removed.
+  // All TTS is now handled by the centralized usePatientInteraction hook
+  // which uses ttsService.js for queued, non-overlapping speech.
 
   return (
     <section className="patient-view-wrapper">
       <div className="pv-root">
         <ClockScreen active={clockActive} />
-        {cardPerson && <RecognitionCard person={cardPerson} active={cardActive} />}
+        {cardPerson && (
+          <RecognitionCard
+            person={cardPerson}
+            active={cardActive}
+            interactionState={interactionState}
+            systemResponse={systemResponse}
+            patientTranscript={patientTranscript}
+          />
+        )}
       </div>
     </section>
   );

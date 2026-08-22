@@ -1,8 +1,17 @@
 /**
  * RecognitionCard — Full-screen card showing the confirmed visitor.
- * Displays visitor name, relationship badge, and latest memory note.
+ * Displays visitor name, relationship badge, latest memory note,
+ * and interaction state (listening, thinking, speaking indicators).
  */
-export default function RecognitionCard({ person, active }) {
+import { STATES } from "../../hooks/usePatientInteraction.js";
+
+export default function RecognitionCard({
+  person,
+  active,
+  interactionState = STATES.RECOGNIZED,
+  systemResponse = "",
+  patientTranscript = "",
+}) {
   if (!person) return null;
 
   const name = person.name || "A loved one";
@@ -17,6 +26,34 @@ export default function RecognitionCard({ person, active }) {
 
   const initial = (name[0] || "A").toUpperCase();
   const avatarColor = person.avatar_color || "var(--primary)";
+
+  // Determine status indicator text and class
+  let statusText = "Anchor is keeping watch";
+  let statusSubtext = "Remembering your conversation gently.";
+  let statusClass = "interaction-idle";
+
+  switch (interactionState) {
+    case STATES.INTRODUCING:
+    case STATES.SPEAKING:
+      statusText = "Anchor is speaking";
+      statusSubtext = "";
+      statusClass = "interaction-speaking";
+      break;
+    case STATES.LISTENING:
+      statusText = "Anchor is listening";
+      statusSubtext = "You can ask me anything.";
+      statusClass = "interaction-listening";
+      break;
+    case STATES.THINKING:
+      statusText = "Let me think";
+      statusSubtext = "";
+      statusClass = "interaction-thinking";
+      break;
+    default:
+      statusText = "Anchor is listening with care";
+      statusSubtext = "Remembering your conversation gently.";
+      statusClass = "interaction-idle";
+  }
 
   return (
     <div className={`recognition-card ${active ? "active" : ""}`} aria-live="assertive">
@@ -37,7 +74,22 @@ export default function RecognitionCard({ person, active }) {
         <div className="memory-text">{note}</div>
       </div>
 
-      <div className="listening-indicator-row">
+      {/* System response display (what Anchor said/is saying) */}
+      {systemResponse && (
+        <div className="system-response-card" aria-live="polite">
+          <div className="system-response-text">{systemResponse}</div>
+        </div>
+      )}
+
+      {/* Patient transcript display (what the patient said) */}
+      {patientTranscript && interactionState === STATES.LISTENING && (
+        <div className="patient-transcript-card" aria-live="polite">
+          <div className="patient-transcript-label">You said:</div>
+          <div className="patient-transcript-text">{patientTranscript}</div>
+        </div>
+      )}
+
+      <div className={`listening-indicator-row ${statusClass}`}>
         <div className="listening-left">
           <div className="soundwave-anim">
             <span></span>
@@ -47,8 +99,8 @@ export default function RecognitionCard({ person, active }) {
             <span></span>
           </div>
           <div>
-            <div className="listening-text">Anchor is listening with care</div>
-            <div className="listening-subtext">Remembering your conversation gently.</div>
+            <div className="listening-text">{statusText}</div>
+            {statusSubtext && <div className="listening-subtext">{statusSubtext}</div>}
           </div>
         </div>
       </div>
