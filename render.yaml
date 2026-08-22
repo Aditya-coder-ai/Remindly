@@ -3,7 +3,7 @@ services:
     name: anchor-companion
     env: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./backend/Dockerfile
     envVars:
       - key: DATABASE_URL
         sync: false
