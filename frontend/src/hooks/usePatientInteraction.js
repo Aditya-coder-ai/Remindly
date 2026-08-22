@@ -106,11 +106,17 @@ export function usePatientInteraction({
     }
 
     // Person arrived or changed
-    const personId = recognizedPerson.person_id;
+    const personKey = (recognizedPerson.person_id || recognizedPerson.name || "").toLowerCase();
+    const personName = (recognizedPerson.name || "").toLowerCase();
     const lastGreeting = lastGreetingRef.current;
 
-    // Check if we already greeted this person recently
-    const isSamePerson = lastGreeting.personId === personId;
+    // Check if we already greeted this person recently (5-min cooldown)
+    const isSamePerson =
+      lastGreeting.key &&
+      (lastGreeting.key === personKey ||
+       lastGreeting.name === personName ||
+       lastGreeting.key === personName);
+
     const isWithinCooldown = Date.now() - lastGreeting.timestamp < GREETING_COOLDOWN_MS;
 
     if (isSamePerson && isWithinCooldown) {
@@ -121,9 +127,15 @@ export function usePatientInteraction({
       return;
     }
 
+    // Record greeting timestamp immediately to lock out double-triggers
+    lastGreetingRef.current = {
+      key: personKey,
+      name: personName,
+      timestamp: Date.now(),
+    };
+
     // New person or cooldown expired — start introduction
     if (state === STATES.INTRODUCING || state === STATES.SPEAKING) {
-      // Interrupt current TTS for identity change
       tts.stop();
       stt.stopListening();
     }
@@ -159,12 +171,6 @@ export function usePatientInteraction({
       greeting = `${name} is here.`;
     }
 
-    // Update greeting dedup tracker
-    lastGreetingRef.current = {
-      personId: person.person_id,
-      timestamp: Date.now(),
-    };
-
     setSystemResponse(greeting);
 
     // Speak greeting
@@ -172,9 +178,14 @@ export function usePatientInteraction({
 
     if (!mountedRef.current || personRef.current?.person_id !== person.person_id) return;
 
-    // Speak memory note if available
-    if (note) {
-      const memoryText = note.length > 100 ? note.substring(0, 100) + "." : note;
+    // Speak memory note if available (filter out any placeholder text)
+    if (
+      note &&
+      !note.toLowerCase().includes("processing audio") &&
+      !note.toLowerCase().includes("no speech detected") &&
+      !note.toLowerCase().includes("no audio captured")
+    ) {
+      const memoryText = note.length > 120 ? note.substring(0, 120) + "." : note;
       setSystemResponse(memoryText);
       await tts.speak(memoryText);
     }

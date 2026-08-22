@@ -10,6 +10,7 @@ export default function CaregiverDashboard({
   activePerson,
   transcript,
   isCapturing,
+  onToggleListening,
   onAppendSpeech,
   onClearSpeech,
   onSimulateArrive,
@@ -22,6 +23,10 @@ export default function CaregiverDashboard({
   onClearEncodings,
   ttsSettings,
   onTtsSettingsChange,
+  liveSegments = [],
+  partialSegment = null,
+  visitDuration = "00:00",
+  statusState = "idle",
 }) {
   const visitorName = activePerson?.name || "None";
 
@@ -34,9 +39,14 @@ export default function CaregiverDashboard({
         <LiveVisitMonitor
           transcript={transcript}
           isCapturing={isCapturing}
+          onToggleListening={onToggleListening}
           onAppendSpeech={onAppendSpeech}
           onClearSpeech={onClearSpeech}
           statusBadgeText={isVisitorPresent ? `In Visit with ${visitorName}` : null}
+          liveSegments={liveSegments}
+          partialSegment={partialSegment}
+          visitDuration={visitDuration}
+          statusState={statusState}
         />
 
         <VisitSimulator

@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 /**
- * LiveCameraFeed — Streams webcam feed with face recognition overlays.
- * Features auto-reconnect, dual-mode fallback (MJPEG stream + snapshot polling),
- * and live recognition status indicators.
+ * LiveCameraFeed — Streams webcam feed with face recognition overlays,
+ * passive liveness indicators (EAR & blinks), and dynamic multi-camera device selection.
  */
 export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   const [streamMode, setStreamMode] = useState("mjpeg"); // 'mjpeg' | 'snapshot'
@@ -12,7 +11,63 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   const [isConnected, setIsConnected] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Multi-camera state
+  const [cameras, setCameras] = useState([]);
+  const [activeCamera, setActiveCamera] = useState(0);
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+
   const snapshotIntervalRef = useRef(null);
+
+  // Fetch available cameras from backend
+  const fetchCameras = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cameras");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cameras && Array.isArray(data.cameras)) {
+          setCameras(data.cameras);
+          if (data.active_camera !== undefined) {
+            setActiveCamera(data.active_camera);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to probe camera devices:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCameras();
+  }, [fetchCameras]);
+
+  // Handle dynamic camera hot-switch
+  const handleCameraChange = async (e) => {
+    const newIndex = parseInt(e.target.value, 10);
+    if (isNaN(newIndex)) return;
+
+    setIsSwitchingCamera(true);
+    try {
+      const res = await fetch("/api/camera_select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ camera_index: newIndex }),
+      });
+      if (res.ok) {
+        setActiveCamera(newIndex);
+        // Refresh feed with a fresh timestamp
+        setTimeout(() => {
+          setStreamKey(Date.now());
+          setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
+          setIsConnected(true);
+          setHasError(false);
+          setIsSwitchingCamera(false);
+        }, 400);
+      }
+    } catch (err) {
+      console.error("Camera switch error:", err);
+      setIsSwitchingCamera(false);
+    }
+  };
 
   // Snapshot polling mode (10 FPS) for environments where MJPEG streams stall
   useEffect(() => {
@@ -38,12 +93,12 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
     setIsConnected(true);
     setStreamKey(Date.now());
     setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
+    fetchCameras();
   };
 
   const handleImgError = () => {
     setHasError(true);
     setIsConnected(false);
-    // Auto-retry in 2.5s with a fresh timestamp
     setTimeout(() => {
       setHasError(false);
       setStreamKey(Date.now());
@@ -53,7 +108,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   return (
     <div className="panel-card">
       <h2>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <span>Live Camera Feed</span>
           <span
             className="badge"
@@ -78,11 +133,55 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+          {/* Multi-Camera Selector */}
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <label htmlFor="cam-select" style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
+              📹
+            </label>
+            <select
+              id="cam-select"
+              className="form-control"
+              value={activeCamera}
+              onChange={handleCameraChange}
+              disabled={isSwitchingCamera}
+              style={{
+                padding: "3px 8px",
+                fontSize: "11px",
+                height: "26px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--surface-raised)",
+                color: "var(--text)",
+                borderColor: "var(--border)",
+                cursor: "pointer",
+              }}
+              title="Select active camera device"
+            >
+              {cameras.length > 0 ? (
+                cameras.map((c) => (
+                  <option key={c.index} value={c.index}>
+                    {c.name}
+                  </option>
+                ))
+              ) : (
+                <option value={0}>Camera 0 (Default)</option>
+              )}
+            </select>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: "3px 6px", fontSize: "11px", height: "26px" }}
+              onClick={fetchCameras}
+              title="Rescan camera devices"
+            >
+              🔍
+            </button>
+          </div>
+
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: "3px 8px", fontSize: "11px" }}
+            style={{ padding: "3px 8px", fontSize: "11px", height: "26px" }}
             onClick={() =>
               setStreamMode(streamMode === "mjpeg" ? "snapshot" : "mjpeg")
             }
@@ -93,7 +192,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: "3px 8px", fontSize: "11px" }}
+            style={{ padding: "3px 8px", fontSize: "11px", height: "26px" }}
             onClick={handleReconnect}
             title="Reconnect video feed"
           >
@@ -149,6 +248,24 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
               maxHeight: "280px",
             }}
           />
+        )}
+
+        {isSwitchingCamera && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(15, 23, 18, 0.75)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--primary)",
+              fontWeight: 600,
+              fontSize: "13px",
+            }}
+          >
+            📹 Switching Camera…
+          </div>
         )}
 
         {hasError && (

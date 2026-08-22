@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import ClockScreen from "./ClockScreen.jsx";
 import RecognitionCard from "./RecognitionCard.jsx";
 import { usePatientInteraction, STATES } from "../../hooks/usePatientInteraction.js";
+import * as tts from "../../services/ttsService.js";
+import * as stt from "../../services/sttService.js";
 
 const FADE_MS = 700;
 
@@ -17,6 +19,23 @@ export default function PatientView({
   const unmountTimer = useRef(null);
 
   const clockActive = cardPerson === null || !cardActive;
+
+  // Apply TTS and STT settings when they change
+  useEffect(() => {
+    if (ttsSettings) {
+      tts.setConfig({
+        rate: ttsSettings.rate,
+        pitch: ttsSettings.pitch,
+        volume: ttsSettings.volume,
+        language: ttsSettings.language,
+        voiceName: ttsSettings.voiceName,
+        enabled: ttsSettings.ttsEnabled !== false && speakAloud !== false,
+      });
+      stt.setConfig({
+        language: ttsSettings.language,
+      });
+    }
+  }, [ttsSettings, speakAloud]);
 
   // Patient interaction state machine (TTS + STT + conversation loop)
   const {

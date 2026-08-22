@@ -52,7 +52,7 @@ ALLOWED_GROQ_KEYS = {"model", "max_tokens", "temperature", "messages"}
 ALLOWED_GROQ_ROLES = {"system", "user", "assistant"}
 
 # Biometric Recognition Parameters
-DEFAULT_TOLERANCE = 0.22
+DEFAULT_TOLERANCE = 0.38
 DEFAULT_ENTER_STREAK = 3
 DEFAULT_EXIT_STREAK = 5
 DEFAULT_SCAN_INTERVAL = 0.35

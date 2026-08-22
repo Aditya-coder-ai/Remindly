@@ -78,3 +78,5 @@ Remindly/
 
 backend/data/*.jsonl
 backend/data/face_profiles.json
+backend/data/ssl/
+*.pem

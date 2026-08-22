@@ -81,11 +81,11 @@ export default function RecognitionCard({
         </div>
       )}
 
-      {/* Patient transcript display (what the patient said) */}
-      {patientTranscript && interactionState === STATES.LISTENING && (
+      {/* Patient transcript display (what the patient said / is saying) */}
+      {patientTranscript && (
         <div className="patient-transcript-card" aria-live="polite">
-          <div className="patient-transcript-label">You said:</div>
-          <div className="patient-transcript-text">{patientTranscript}</div>
+          <div className="patient-transcript-label">🗣️ You said:</div>
+          <div className="patient-transcript-text">"{patientTranscript}"</div>
         </div>
       )}
 

@@ -6,7 +6,7 @@
 export const ANCHOR_API_CONFIG = {
   apiKey: "",
   endpoint: "/api/groq",
-  model: "llama-3.3-70b-versatile",
+  model: "groq/compound-mini",
   maxTokens: 60,
   temperature: 0.7,
 };
@@ -92,7 +92,7 @@ async function callGroq(person, transcript) {
       method: "POST",
       headers,
       body: JSON.stringify({
-        model: model || "llama-3.3-70b-versatile",
+        model: model || "groq/compound-mini",
         max_tokens: maxTokens || 60,
         temperature: temperature ?? 0.7,
         messages: [

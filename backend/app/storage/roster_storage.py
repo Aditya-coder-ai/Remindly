@@ -229,6 +229,18 @@ class RosterStorage:
         note: str,
         transcript: str = "",
     ) -> Optional[PersonProfile]:
+        clean_note = (note or "").strip()
+        # Protect memory note from being corrupted with temporary placeholders
+        if clean_note.lower() in [
+            "processing audio...",
+            "no audio captured.",
+            "no speech detected during this visit",
+            "idle",
+            "",
+        ]:
+            logger.info("Ignoring placeholder note '%s' for %s", clean_note, person_id)
+            return self._profiles.get(person_id)
+
         p = self._profiles.get(person_id)
         if not p:
             # Auto-create if not present

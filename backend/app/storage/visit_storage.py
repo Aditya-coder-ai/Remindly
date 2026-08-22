@@ -66,6 +66,24 @@ class VisitStorage:
             await conn.execute("""
                 CREATE INDEX IF NOT EXISTS follow_ups_patient_id_idx ON visit_follow_ups (patient_id);
             """)
+
+            # Create visit_transcripts table
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS visit_transcripts (
+                    visit_id text NOT NULL,
+                    segment_id text NOT NULL,
+                    text text NOT NULL,
+                    speaker text,
+                    sequence integer NOT NULL,
+                    timestamp text NOT NULL,
+                    PRIMARY KEY (visit_id, segment_id)
+                );
+            """)
+            
+            # Create index for transcripts
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS visit_transcripts_visit_id_idx ON visit_transcripts (visit_id);
+            """)
             logger.info("Visit database initialization complete.")
 
     @asynccontextmanager
@@ -135,6 +153,53 @@ class VisitStorage:
                 fu_res = await conn.execute("SELECT * FROM visit_follow_ups WHERE visit_id = %s", (visit_id,))
                 row["follow_ups"] = await fu_res.fetchall()
             return row
+
+    async def add_transcript_segment(
+        self,
+        visit_id: str,
+        segment_id: str,
+        text: str,
+        speaker: str,
+        sequence: int,
+        timestamp: str
+    ) -> bool:
+        """
+        Stores a finalized transcript segment. Idempotent.
+        """
+        try:
+            async with self.get_connection() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO visit_transcripts (visit_id, segment_id, text, speaker, sequence, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (visit_id, segment_id) DO NOTHING
+                    """,
+                    (visit_id, segment_id, text, speaker, sequence, timestamp)
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save transcript segment: {e}")
+            return False
+
+    async def get_transcript_segments(self, visit_id: str) -> List[Dict[str, Any]]:
+        """
+        Retrieves all finalized segments for a specific visit sorted by sequence.
+        """
+        try:
+            async with self.get_connection() as conn:
+                res = await conn.execute(
+                    """
+                    SELECT segment_id, text, speaker, sequence, timestamp
+                    FROM visit_transcripts
+                    WHERE visit_id = %s
+                    ORDER BY sequence ASC
+                    """,
+                    (visit_id,)
+                )
+                return await res.fetchall()
+        except Exception as e:
+            logger.error(f"Failed to fetch transcript segments: {e}")
+            return []
 
 # Singleton instance
 visit_storage = VisitStorage()

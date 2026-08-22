@@ -8,6 +8,12 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+
+# Add project root to sys.path
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import numpy as np
 
 from fastapi.testclient import TestClient
@@ -32,11 +38,12 @@ def test_biometrics():
     assert encoding_distance(v1, v2) == 0.0
     assert calculate_confidence(0.0) == 1.0
 
+    from backend.app.config import DEFAULT_TOLERANCE
     v3 = v1 + np.random.randn(206) * 0.005
     v3 /= np.linalg.norm(v3)
     dist = encoding_distance(v1, v3)
     assert dist < 0.20, f"Expected small distance, got {dist}"
-    conf = calculate_confidence(dist, tolerance=0.22)
+    conf = calculate_confidence(dist, tolerance=DEFAULT_TOLERANCE)
     assert conf > 0.65, f"Expected high confidence, got {conf}"
     print(f"  [OK] Biometric vector matching passed (perturbed dist={dist:.3f}, conf={conf:.1%}).")
 

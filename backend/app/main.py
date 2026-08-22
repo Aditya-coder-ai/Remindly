@@ -23,6 +23,7 @@ import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import openai
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, UploadFile, File, Form, BackgroundTasks
@@ -39,6 +40,7 @@ from .config import (
     DEFAULT_GROQ_KEY,
     FRONTEND_DIST_DIR,
     STATIC_DIR,
+    DATA_DIR,
     GROQ_ENDPOINT,
     HOST,
     PORT,
@@ -48,12 +50,14 @@ from .schemas.models import (
     ProfileInput,
     RegisterFaceInput,
     SimulateInput,
+    CameraSelectInput,
     UpdateNoteInput,
     MemoryCreateInput,
     MemorySearchInput,
     MemorySearchResponse,
     PatientAskInput,
     PatientAskResponse,
+    TranscriptSegmentInput,
 )
 from .storage.roster_storage import RosterStorage
 from .storage.memory_storage import memory_storage
@@ -216,6 +220,29 @@ def update_note(payload: UpdateNoteInput):
 def get_system_status():
     """Health check and live recognition service status."""
     return recognition_service.get_status()
+
+
+@app.get("/api/cameras")
+def get_cameras():
+    """Discover available video devices and return active device index."""
+    cameras = recognition_service.get_available_cameras()
+    return {
+        "success": True,
+        "cameras": cameras,
+        "active_camera": recognition_service.camera_index,
+        "remote_active": recognition_service._remote_active,
+    }
+
+
+@app.post("/api/camera_select")
+def select_camera(payload: CameraSelectInput):
+    """Hot-switch active webcam on the fly."""
+    success = recognition_service.set_camera_index(payload.camera_index)
+    return {
+        "success": success,
+        "active_camera": recognition_service.camera_index,
+        "message": f"Switched to Camera #{payload.camera_index}",
+    }
 
 
 @app.post("/api/simulate")
@@ -398,10 +425,12 @@ async def upload_visit_audio(
     audio: UploadFile = File(...),
     person_id: str = Form(...),
     started_at: str = Form(...),
-    ended_at: str = Form(...)
+    ended_at: str = Form(...),
+    visit_id: Optional[str] = Form(None)
 ):
     """Receive visit audio, start async processing, and return immediately."""
-    visit_id = str(uuid.uuid4())
+    if not visit_id:
+        visit_id = str(uuid.uuid4())
     temp_dir = Path(os.environ.get("TEMP", "/tmp")) / "anchor_visits"
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_audio_path = temp_dir / f"{visit_id}_{audio.filename}"
@@ -423,6 +452,124 @@ async def upload_visit_audio(
     )
     
     return {"success": True, "visit_id": visit_id, "status": "processing"}
+
+
+@app.post("/api/visits/{visit_id}/transcript")
+async def add_transcript_segment(visit_id: str, payload: TranscriptSegmentInput):
+    """Save a finalized transcript segment. Idempotent based on visit_id + segment_id."""
+    success = await visit_storage.add_transcript_segment(
+        visit_id=visit_id,
+        segment_id=payload.segment_id,
+        text=payload.text,
+        speaker=payload.speaker or "unknown",
+        sequence=payload.sequence,
+        timestamp=payload.timestamp
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save transcript segment")
+    return {"success": True, "segment_id": payload.segment_id}
+
+
+@app.post("/api/transcribe")
+async def transcribe_audio_chunk(request: Request, audio: Optional[UploadFile] = File(None)):
+    """Transcribe a live audio slice using Groq Whisper (fallback to OpenAI Whisper).
+
+    Accepts raw audio bytes (audio/webm, audio/wav, audio/ogg) or multipart upload.
+    Ultra-low-latency speech recognition (<300ms) for reliable fallback when Web Speech API fails.
+    """
+    groq_key = os.environ.get("GROQ_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    if not groq_key and not openai_key:
+        raise HTTPException(status_code=503, detail="No STT API key configured (GROQ_API_KEY or OPENAI_API_KEY).")
+
+    audio_bytes = b""
+    filename = "audio_chunk.webm"
+    if audio:
+        audio_bytes = await audio.read()
+        filename = audio.filename or "audio_chunk.webm"
+    else:
+        audio_bytes = await request.body()
+        content_type = request.headers.get("content-type", "")
+        if "wav" in content_type:
+            filename = "audio_chunk.wav"
+        elif "ogg" in content_type:
+            filename = "audio_chunk.ogg"
+        elif "mp4" in content_type:
+            filename = "audio_chunk.mp4"
+
+    if not audio_bytes or len(audio_bytes) < 100:
+        return {"success": True, "transcript": "", "words": 0}
+
+    temp_dir = Path(os.environ.get("TEMP", "/tmp")) / "anchor_stt"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_file = temp_dir / f"{uuid.uuid4()}_{filename}"
+
+    try:
+        with open(temp_file, "wb") as f:
+            f.write(audio_bytes)
+
+        transcript_text = ""
+
+        # 1. Try Groq Whisper (sub-300ms)
+        if groq_key:
+            try:
+                groq_client = openai.OpenAI(
+                    api_key=groq_key,
+                    base_url="https://api.groq.com/openai/v1"
+                )
+                with open(temp_file, "rb") as af:
+                    res = groq_client.audio.transcriptions.create(
+                        model="whisper-large-v3-turbo",
+                        file=af,
+                        response_format="json",
+                        language="en"
+                    )
+                    transcript_text = getattr(res, "text", "") or (res.get("text", "") if isinstance(res, dict) else "")
+            except Exception as e:
+                logger.warning(f"Groq /api/transcribe failed: {e}")
+
+        # 2. Fallback to OpenAI Whisper
+        if not transcript_text and openai_key:
+            try:
+                client = openai.OpenAI(api_key=openai_key)
+                with open(temp_file, "rb") as af:
+                    res = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=af,
+                        response_format="json",
+                        language="en"
+                    )
+                    transcript_text = getattr(res, "text", "") or (res.get("text", "") if isinstance(res, dict) else "")
+            except Exception as e:
+                logger.error(f"OpenAI /api/transcribe failed: {e}")
+
+        text = transcript_text.strip()
+        words = len(text.split()) if text else 0
+        return {"success": True, "transcript": text, "words": words}
+
+    finally:
+        if temp_file.exists():
+            try:
+                temp_file.unlink()
+            except Exception:
+                pass
+
+
+@app.get("/api/visits/{visit_id}/transcript")
+async def get_transcript_segments(visit_id: str):
+    """Retrieve all finalized segments for a specific visit sorted by sequence."""
+    segments = await visit_storage.get_transcript_segments(visit_id)
+    formatted = []
+    for s in segments:
+        formatted.append({
+            "segment_id": s["segment_id"],
+            "text": s["text"],
+            "speaker": s.get("speaker") or "unknown",
+            "sequence": s["sequence"],
+            "timestamp": s["timestamp"]
+        })
+    return {"success": True, "visit_id": visit_id, "segments": formatted}
 
 
 # ---------------------------------------------------------------------------
@@ -487,6 +634,25 @@ async def receive_remote_frame(request: Request):
     return {"ok": True}
 
 
+@app.websocket("/ws/remote_frame")
+async def websocket_remote_frame(websocket: WebSocket):
+    """Ultra-low-latency persistent binary WebSocket channel for mobile camera streaming.
+
+    Eliminates HTTP connection handshake overhead and TCP queue bloat.
+    """
+    await websocket.accept()
+    logger.info("Mobile camera ultra-low-latency WebSocket connected.")
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            if data:
+                recognition_service.inject_remote_frame(data)
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        logger.info("Mobile camera WebSocket disconnected.")
+    except Exception as e:
+        logger.warning(f"Mobile camera WebSocket closed: {e}")
+
+
 @app.get("/capture")
 async def capture_page():
     """Serve the standalone capture-device page (phone / future glasses)."""
@@ -506,15 +672,34 @@ async def capture_page():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """Bi-directional WebSocket for instant arrival/departure events."""
+    """Bi-directional WebSocket for instant arrival/departure events and transcript streaming."""
     await websocket.accept()
     queue = recognition_service.register_subscriber()
     logger.info("WebSocket client connected. Active subscribers: %d", len(recognition_service._subscribers))
 
+    async def receive_messages():
+        try:
+            while True:
+                data = await websocket.receive_text()
+                try:
+                    payload = json.loads(data)
+                    if payload.get("type") in ("transcript_partial", "transcript_final"):
+                        recognition_service.broadcast_event(payload)
+                except Exception as e:
+                    logger.warning(f"Error handling websocket message: {e}")
+        except WebSocketDisconnect:
+            pass
+
+    async def send_messages():
+        try:
+            while True:
+                event = await queue.get()
+                await websocket.send_text(json.dumps(event))
+        except WebSocketDisconnect:
+            pass
+
     try:
-        while True:
-            event = await queue.get()
-            await websocket.send_text(json.dumps(event))
+        await asyncio.gather(receive_messages(), send_messages())
     except (WebSocketDisconnect, asyncio.CancelledError):
         logger.info("WebSocket client disconnected.")
     finally:
@@ -570,7 +755,7 @@ async def groq_proxy(request: Request):
         sanitized_messages.append({"role": role, "content": content})
 
     clean_payload = {
-        "model": payload.get("model", "llama-3.3-70b-versatile"),
+        "model": payload.get("model", "groq/compound-mini"),
         "messages": sanitized_messages,
         "max_tokens": min(int(payload.get("max_tokens", 60)), 512),
         "temperature": float(payload.get("temperature", 0.7)),
@@ -649,11 +834,34 @@ if __name__ == "__main__":
     loop = asyncio.SelectorEventLoop(selector)
     asyncio.set_event_loop(loop)
 
-    print(f"\n{'='*60}")
-    print(f"  Anchor — Dementia Care Companion Backend")
-    print(f"  Listening on http://localhost:{PORT}")
-    print(f"{'='*60}\n")
+    cert_dir = DATA_DIR / "ssl"
+    cert_file, key_file = None, None
+    try:
+        from .ssl_helper import get_or_create_ssl_cert
+        cert_file, key_file = get_or_create_ssl_cert(cert_dir)
+    except Exception as e:
+        logger.warning(f"Could not generate SSL certs for HTTPS: {e}")
 
-    config = uvicorn.Config(app=app, host=HOST, port=PORT, loop="asyncio")
-    server = uvicorn.Server(config)
-    loop.run_until_complete(server.serve())
+    print(f"\n{'='*65}")
+    print(f"  Anchor - Dementia Care Companion Backend")
+    print(f"  HTTP Server (PC / Dev)   : http://localhost:{PORT}")
+    if cert_file and key_file:
+        print(f"  HTTPS Server (Mobile Cam): https://192.168.137.42:8443/capture")
+    print(f"{'='*65}\n")
+
+    http_config = uvicorn.Config(app=app, host=HOST, port=PORT, loop="asyncio")
+    http_server = uvicorn.Server(http_config)
+
+    if cert_file and key_file:
+        https_config = uvicorn.Config(
+            app=app,
+            host=HOST,
+            port=8443,
+            ssl_certfile=cert_file,
+            ssl_keyfile=key_file,
+            loop="asyncio",
+        )
+        https_server = uvicorn.Server(https_config)
+        loop.run_until_complete(asyncio.gather(http_server.serve(), https_server.serve()))
+    else:
+        loop.run_until_complete(http_server.serve())

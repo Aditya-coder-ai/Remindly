@@ -1,10 +1,19 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import PatientView from "./components/PatientView/PatientView.jsx";
 import CaregiverDashboard from "./components/Caregiver/CaregiverDashboard.jsx";
 import FlowWave from "./components/FlowWave/FlowWave.jsx";
 import { useWebSocket } from "./hooks/useWebSocket.js";
 import { useConversationMemory } from "./hooks/useConversationMemory.js";
 import { useRoster } from "./hooks/useRoster.js";
+
+// Helper to generate a unique visit UUID
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Default TTS / interaction settings (caregiver-configurable)
 const DEFAULT_TTS_SETTINGS = {
@@ -22,7 +31,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("patient");
   const [activePerson, setActivePerson] = useState(null);
   const activePersonRef = useRef(null);
+  const [activeVisitId, setActiveVisitId] = useState(null);
   const [ttsSettings, setTtsSettings] = useState(DEFAULT_TTS_SETTINGS);
+  
+  const sendCommandRef = useRef(null);
 
   const {
     profiles,
@@ -38,9 +50,17 @@ export default function App() {
     isCapturing,
     transcript,
     startCapture,
+    stopListening,
     stopCaptureAndSummarize,
     appendTranscript,
     resetTranscript,
+    liveSegments,
+    partialSegment,
+    visitDuration,
+    statusState,
+    handleLiveTranscriptEvent,
+    catchUpTranscript,
+    setStatusState,
   } = useConversationMemory();
 
   const handlePersonArrived = useCallback((person) => {
@@ -49,8 +69,16 @@ export default function App() {
     setActivePerson(match);
 
     resetTranscript();
-    startCapture({ name: match.name });
-  }, [profiles, resetTranscript, startCapture]);
+    const visitId = generateUUID();
+    setActiveVisitId(visitId);
+    
+    startCapture({
+      name: match.name,
+      visitId,
+      language: ttsSettings.language,
+      sendCommand: sendCommandRef.current,
+    });
+  }, [profiles, resetTranscript, startCapture, ttsSettings.language]);
 
   const handlePersonLeft = useCallback(async () => {
     const leaving = activePersonRef.current;
@@ -58,6 +86,7 @@ export default function App() {
 
     activePersonRef.current = null;
     setActivePerson(null);
+    setActiveVisitId(null);
 
     const summary = await stopCaptureAndSummarize(leaving);
     if (summary) {
@@ -76,12 +105,37 @@ export default function App() {
       case "memory_updated":
         reloadRoster();
         break;
+      case "transcript_partial":
+      case "transcript_final":
+        handleLiveTranscriptEvent(event);
+        break;
       default:
         break;
     }
-  }, [handlePersonArrived, handlePersonLeft, reloadRoster]);
+  }, [handlePersonArrived, handlePersonLeft, reloadRoster, handleLiveTranscriptEvent]);
 
-  const { connectionStatus } = useWebSocket(handleServerEvent);
+  const { connectionStatus, sendCommand } = useWebSocket(handleServerEvent);
+  sendCommandRef.current = sendCommand;
+
+  // Sync connection status to conversation memory hook
+  useEffect(() => {
+    if (connectionStatus === "disconnected") {
+      setStatusState("disconnected");
+    } else if (connectionStatus === "connected") {
+      if (isCapturing) {
+        setStatusState("listening");
+      } else {
+        setStatusState("idle");
+      }
+    }
+  }, [connectionStatus, isCapturing, setStatusState]);
+
+  // Catch up on missed segments when reconnected/connected
+  useEffect(() => {
+    if (connectionStatus === "connected" && activeVisitId) {
+      catchUpTranscript(activeVisitId);
+    }
+  }, [connectionStatus, activeVisitId, catchUpTranscript]);
 
   // Simulation triggers
   const handleSimulateArrive = async (personId) => {
@@ -182,7 +236,18 @@ export default function App() {
             activePerson={activePerson}
             transcript={transcript}
             isCapturing={isCapturing}
-            onAppendSpeech={appendTranscript}
+            onToggleListening={() => {
+              if (isCapturing) {
+                stopListening();
+              } else {
+                startCapture({
+                  name: activePerson?.name || "Caregiver/Visitor",
+                  language: ttsSettings.language,
+                  sendCommand: sendCommandRef.current,
+                });
+              }
+            }}
+            onAppendSpeech={(text) => appendTranscript(text, sendCommandRef.current)}
             onClearSpeech={resetTranscript}
             onSimulateArrive={handleSimulateArrive}
             onSimulateLeave={handleSimulateLeave}
@@ -194,6 +259,10 @@ export default function App() {
             onClearEncodings={clearFaceEncodings}
             ttsSettings={ttsSettings}
             onTtsSettingsChange={setTtsSettings}
+            liveSegments={liveSegments}
+            partialSegment={partialSegment}
+            visitDuration={visitDuration}
+            statusState={statusState}
           />
         )}
       </main>

@@ -32,8 +32,8 @@ let relayCtx = null;
 let onStatusChange = null;
 let onPeerIdReady = null;
 
-const FRAME_RELAY_FPS = 8;
-const FRAME_QUALITY = 0.65;
+const FRAME_RELAY_FPS = 12;
+const FRAME_QUALITY = 0.70;
 
 function getPeerConstructor() {
   if (typeof window !== "undefined" && window.Peer) {
@@ -55,7 +55,6 @@ export function startPairing(callbacks = {}) {
 
   const PeerClass = getPeerConstructor();
   if (!PeerClass) {
-    // Dynamic import fallback or CDN check
     const script = document.createElement("script");
     script.src = "https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js";
     script.onload = () => {
@@ -190,16 +189,27 @@ function _startFrameRelay(stream) {
   relayVideo.autoplay = true;
   relayVideo.playsInline = true;
   relayVideo.muted = true;
-  relayVideo.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
+  relayVideo.style.cssText = "position:fixed;top:0;left:0;width:320px;height:240px;opacity:0.01;pointer-events:none;z-index:-999;";
   document.body.appendChild(relayVideo);
 
   relayCanvas = document.createElement("canvas");
+  relayCanvas.width = 640;
+  relayCanvas.height = 480;
   relayCtx = relayCanvas.getContext("2d");
 
+  const startPlaying = () => {
+    relayVideo.play().catch((err) => console.warn("[WearablePairing] relayVideo.play error:", err));
+  };
+
   relayVideo.addEventListener("loadedmetadata", () => {
-    relayCanvas.width = relayVideo.videoWidth || 640;
-    relayCanvas.height = relayVideo.videoHeight || 480;
+    if (relayVideo.videoWidth > 0 && relayVideo.videoHeight > 0) {
+      relayCanvas.width = relayVideo.videoWidth;
+      relayCanvas.height = relayVideo.videoHeight;
+    }
+    startPlaying();
   });
+
+  startPlaying();
 
   const intervalMs = Math.round(1000 / FRAME_RELAY_FPS);
   frameRelayInterval = setInterval(() => _relayOneFrame(), intervalMs);

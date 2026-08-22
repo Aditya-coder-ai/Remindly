@@ -28,6 +28,10 @@ export default function ClockScreen({ active }) {
         <div className="clock-comfort-subtitle">
           Anchor is keeping watch. When a loved one walks in, we will remind you who they are.
         </div>
+        <div style={{ marginTop: "14px", display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(39,82,61,0.25)", border: "1px solid rgba(52,211,153,0.35)", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", color: "var(--primary-accent, #34d399)", fontWeight: 500 }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 8px #10b981" }}></span>
+          🎙️ Voice &amp; Vision Ready
+        </div>
       </div>
     </div>
   );

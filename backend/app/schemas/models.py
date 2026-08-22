@@ -36,6 +36,10 @@ class SimulateInput(BaseModel):
     person_id: Optional[str] = Field(default=None, description="Person ID required for 'arrive'")
 
 
+class CameraSelectInput(BaseModel):
+    camera_index: int = Field(default=0, description="Webcam device index to switch to")
+
+
 class GroqProxyInput(BaseModel):
     model: str = "llama-3.3-70b-versatile"
     messages: List[Dict[str, Any]]
@@ -125,3 +129,11 @@ class VisitRecord(BaseModel):
     sentiment: Sentiment
     context: str
     patient_summary: str
+
+
+class TranscriptSegmentInput(BaseModel):
+    segment_id: str
+    text: str
+    sequence: int
+    timestamp: str
+    speaker: Optional[str] = "unknown"
