@@ -1,5 +1,5 @@
 # ============================================================================
-# Anchor — Multi-Stage Production Dockerfile for Render / Cloud
+# Anchor — Multi-Stage Production Dockerfile (Root Context)
 # ============================================================================
 
 # ---------- Stage 1: Build Frontend (Node.js 20) ----------
@@ -28,11 +28,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code, models, static assets, and top-level aliases
-COPY backend/ ./backend/
-COPY app/ ./app/
-COPY main.py .
-COPY capture.html .
+# Copy backend, aliases, and static assets
+COPY . .
 
 # Copy pre-built frontend from stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist

@@ -1909,97 +1909,61 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:22 AM",
+    "last_visited": "August 23, 2026, 05:28 AM",
     "history": [
       {
-        "timestamp": 1787442778.0078573,
-        "date_str": "August 23, 2026, 05:22 AM",
+        "timestamp": 1787443108.2875087,
+        "date_str": "August 23, 2026, 05:28 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442598.457714,
-        "date_str": "August 23, 2026, 05:19 AM",
+        "timestamp": 1787443103.8159432,
+        "date_str": "August 23, 2026, 05:28 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442590.4228513,
-        "date_str": "August 23, 2026, 05:19 AM",
+        "timestamp": 1787443093.1271498,
+        "date_str": "August 23, 2026, 05:28 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442590.3078222,
-        "date_str": "August 23, 2026, 05:19 AM",
+        "timestamp": 1787443079.0125108,
+        "date_str": "August 23, 2026, 05:27 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442586.366448,
-        "date_str": "August 23, 2026, 05:19 AM",
+        "timestamp": 1787443047.0183322,
+        "date_str": "August 23, 2026, 05:27 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442306.9686806,
-        "date_str": "August 23, 2026, 05:15 AM",
+        "timestamp": 1787443042.4720657,
+        "date_str": "August 23, 2026, 05:27 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787442300.232021,
-        "date_str": "August 23, 2026, 05:15 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787443038.7336586,
+        "date_str": "August 23, 2026, 05:27 AM",
+        "note": "Speaker: problem hai\nSpeaker: ganda Sa",
+        "transcript": "Speaker: problem hai\nSpeaker: ganda Sa"
       },
       {
-        "timestamp": 1787442180.6274495,
-        "date_str": "August 23, 2026, 05:13 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787442982.1720212,
+        "date_str": "August 23, 2026, 05:26 AM",
+        "note": "Speaker: doubt vaise Mujhe Achcha Laga\nSpeaker: aap kya karne bol rahe hain bhai",
+        "transcript": "Speaker: doubt vaise Mujhe Achcha Laga\nSpeaker: aap kya karne bol rahe hain bhai"
       },
       {
-        "timestamp": 1787442175.3909721,
-        "date_str": "August 23, 2026, 05:12 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442164.1838725,
-        "date_str": "August 23, 2026, 05:12 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442158.0961945,
-        "date_str": "August 23, 2026, 05:12 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442129.3804703,
-        "date_str": "August 23, 2026, 05:12 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442122.4598083,
-        "date_str": "August 23, 2026, 05:12 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442117.1336539,
-        "date_str": "August 23, 2026, 05:11 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787442113.0758815,
-        "date_str": "August 23, 2026, 05:11 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787442845.2427707,
+        "date_str": "August 23, 2026, 05:24 AM",
+        "note": "Speaker: blah blah blah\nSpeaker: Inder and setting",
+        "transcript": "Speaker: blah blah blah\nSpeaker: Inder and setting"
       },
       {
         "timestamp": 1787442101.7210984,
@@ -2030,6 +1994,42 @@
         "date_str": "August 23, 2026, 05:04 AM",
         "note": "Speaker: Hanuman Chalisa",
         "transcript": "Speaker: Hanuman Chalisa"
+      },
+      {
+        "timestamp": 1787441496.7627347,
+        "date_str": "August 23, 2026, 05:01 AM",
+        "note": "Speaker: Hanuman Chalisa",
+        "transcript": "Speaker: Hanuman Chalisa"
+      },
+      {
+        "timestamp": 1787441289.5491135,
+        "date_str": "August 23, 2026, 04:58 AM",
+        "note": "Speaker: Sone dena\nSpeaker: blah blah blah blah blah blah install",
+        "transcript": "Speaker: Sone dena\nSpeaker: blah blah blah blah blah blah install"
+      },
+      {
+        "timestamp": 1787439868.1874619,
+        "date_str": "August 23, 2026, 04:34 AM",
+        "note": "Speaker: Kya Tumne Apna Kam Kiya",
+        "transcript": "Speaker: Kya Tumne Apna Kam Kiya"
+      },
+      {
+        "timestamp": 1787439684.3794665,
+        "date_str": "August 23, 2026, 04:31 AM",
+        "note": "Speaker: Tera Saath Hai",
+        "transcript": "Speaker: Tera Saath Hai"
+      },
+      {
+        "timestamp": 1787438232.0355787,
+        "date_str": "August 23, 2026, 04:07 AM",
+        "note": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni",
+        "transcript": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni"
+      },
+      {
+        "timestamp": 1787438118.608601,
+        "date_str": "August 23, 2026, 04:05 AM",
+        "note": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun",
+        "transcript": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun"
       }
     ],
     "encodings": [

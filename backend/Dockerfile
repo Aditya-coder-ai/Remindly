@@ -1,19 +1,7 @@
 # ============================================================================
-# Anchor — Multi-Stage Production Dockerfile (Backend Directory)
+# Anchor — Self-Contained Backend Dockerfile
 # ============================================================================
-
-# ---------- Stage 1: Build Frontend (Node.js 20) ----------
-FROM node:20-slim AS frontend-builder
-WORKDIR /app/frontend
-
-COPY frontend/package*.json ./
-RUN npm install --no-audit --no-fund
-
-COPY frontend/ ./
-RUN npm run build
-
-# ---------- Stage 2: Python Backend Runtime (Python 3.11 Slim) ----------
-FROM python:3.11-slim AS runner
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -28,14 +16,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code, models, static assets, and top-level aliases
-COPY backend/ ./backend/
-COPY app/ ./app/
-COPY main.py .
-COPY capture.html .
-
-# Copy pre-built frontend from stage 1
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# Copy all backend code, models, static files, and data
+COPY . .
 
 # Default network settings
 ENV PORT=8000
