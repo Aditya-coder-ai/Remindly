@@ -6,19 +6,31 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:03 AM",
+    "last_visited": "August 23, 2026, 05:07 AM",
     "history": [
       {
-        "timestamp": 1787441600.198276,
-        "date_str": "August 23, 2026, 05:03 AM",
+        "timestamp": 1787441826.4874735,
+        "date_str": "August 23, 2026, 05:07 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787441589.0376308,
-        "date_str": "August 23, 2026, 05:03 AM",
-        "note": "You have a warm visit, and I thank you as we move on to the next topic.",
+        "timestamp": 1787441757.733004,
+        "date_str": "August 23, 2026, 05:05 AM",
+        "note": "You had a nice visit today.",
         "transcript": ""
+      },
+      {
+        "timestamp": 1787441746.7226477,
+        "date_str": "August 23, 2026, 05:05 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787441673.4289787,
+        "date_str": "August 23, 2026, 05:04 AM",
+        "note": "Speaker: Maharaja",
+        "transcript": "Speaker: Maharaja"
       },
       {
         "timestamp": 1787437375.2735727,
@@ -1914,26 +1926,38 @@
     "relationship": "Visitor",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You had a nice visit, and you felt happy sharing a smile.",
-    "last_visited": "August 23, 2026, 05:03 AM",
+    "note": "You had a nice visit today.",
+    "last_visited": "August 23, 2026, 05:05 AM",
     "history": [
       {
-        "timestamp": 1787441603.2109878,
-        "date_str": "August 23, 2026, 05:03 AM",
-        "note": "You had a nice visit, and you felt happy sharing a smile.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787441509.522981,
-        "date_str": "August 23, 2026, 05:01 AM",
+        "timestamp": 1787441752.3994794,
+        "date_str": "August 23, 2026, 05:05 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787441500.6169837,
-        "date_str": "August 23, 2026, 05:01 AM",
-        "note": "You had a nice visit with Hanuman Chalisa. You shared warm moments together.",
+        "timestamp": 1787441742.7504609,
+        "date_str": "August 23, 2026, 05:05 AM",
+        "note": "You had a nice visit today.",
         "transcript": ""
+      },
+      {
+        "timestamp": 1787441735.4165213,
+        "date_str": "August 23, 2026, 05:05 AM",
+        "note": "Speaker: Nahin hota hai ki aapane aap change ho jaaye",
+        "transcript": "Speaker: Nahin hota hai ki aapane aap change ho jaaye"
+      },
+      {
+        "timestamp": 1787441689.2074394,
+        "date_str": "August 23, 2026, 05:04 AM",
+        "note": "Speaker: change Nahin Hota ki apne aap change ho jaaye",
+        "transcript": "Speaker: change Nahin Hota ki apne aap change ho jaaye"
+      },
+      {
+        "timestamp": 1787441647.54571,
+        "date_str": "August 23, 2026, 05:04 AM",
+        "note": "Speaker: Hanuman Chalisa",
+        "transcript": "Speaker: Hanuman Chalisa"
       },
       {
         "timestamp": 1787441496.7627347,
@@ -2021,18 +2045,6 @@
       },
       {
         "timestamp": 1787437375.4513266,
-        "date_str": "August 23, 2026, 03:52 AM",
-        "note": "Processing audio...",
-        "transcript": "(Transcribing in backend...)"
-      },
-      {
-        "timestamp": 1787437375.349627,
-        "date_str": "August 23, 2026, 03:52 AM",
-        "note": "Processing audio...",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787437360.0671983,
         "date_str": "August 23, 2026, 03:52 AM",
         "note": "Processing audio...",
         "transcript": "(Transcribing in backend...)"
@@ -2664,23 +2676,5 @@
         0.006510988498198633
       ]
     ]
-  },
-  {
-    "person_id": "grandma_anna",
-    "name": "Anna Jenkins",
-    "relationship": "Grandmother",
-    "avatar_color": "#2f6f4f",
-    "avatar_url": null,
-    "note": "Anna and you watered the balcony sunflowers together.",
-    "last_visited": "August 23, 2026, 05:03 AM",
-    "history": [
-      {
-        "timestamp": 1787441580.511028,
-        "date_str": "August 23, 2026, 05:03 AM",
-        "note": "Anna and you watered the balcony sunflowers together.",
-        "transcript": "Let's water these lovely flowers today."
-      }
-    ],
-    "encodings": []
   }
 ]
