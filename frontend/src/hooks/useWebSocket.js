@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { getWebSocketUrl } from "../config/api.js";
 
 /**
  * useWebSocket — Real-time event bridge with Anchor FastAPI backend.
@@ -18,10 +19,7 @@ export function useWebSocket(onEvent) {
   const connect = useCallback(() => {
     if (unmountedRef.current) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
-
+    const wsUrl = getWebSocketUrl();
     setConnectionStatus("connecting");
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;

@@ -15,6 +15,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import * as tts from "../services/ttsService.js";
 import * as stt from "../services/sttService.js";
 import { detectIntent } from "../services/intentDetector.js";
+import { apiUrl } from "../config/api.js";
 
 // ---------- Interaction States ----------
 
@@ -278,7 +279,7 @@ export function usePatientInteraction({
     console.log(`[Interaction] PATIENT_QUERY: "${transcript}" → intent: ${intent}`);
 
     try {
-      const response = await fetch("/api/patient/ask", {
+      const response = await fetch(apiUrl("/api/patient/ask"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

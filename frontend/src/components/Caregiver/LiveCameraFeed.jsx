@@ -1,15 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { apiUrl, getRemoteFrameWebSocketUrl } from "../../config/api.js";
 
 /**
  * LiveCameraFeed — Streams webcam feed with face recognition overlays,
  * passive liveness indicators (EAR & blinks), and dynamic multi-camera device selection.
+ * Also includes instant In-Browser WebCam Streaming for cloud deployments (Vercel + Render).
  */
 export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
-  const [streamMode, setStreamMode] = useState("mjpeg"); // 'mjpeg' | 'snapshot'
+  const [streamMode, setStreamMode] = useState("mjpeg"); // 'mjpeg' | 'snapshot' | 'browser'
   const [streamKey, setStreamKey] = useState(Date.now());
-  const [snapshotUrl, setSnapshotUrl] = useState(`/api/camera_snapshot?t=${Date.now()}`);
+  const [snapshotUrl, setSnapshotUrl] = useState(apiUrl(`/api/camera_snapshot?t=${Date.now()}`));
   const [isConnected, setIsConnected] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  // In-Browser Webcam Streaming state
+  const [isBrowserStreaming, setIsBrowserStreaming] = useState(false);
+  const [browserStreamFps, setBrowserStreamFps] = useState(0);
+  const videoElementRef = useRef(null);
+  const canvasRef = useRef(null);
+  const browserStreamRef = useRef(null);
+  const browserWsRef = useRef(null);
+  const streamIntervalRef = useRef(null);
 
   // Multi-camera state
   const [cameras, setCameras] = useState([]);
@@ -21,7 +32,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
   // Fetch available cameras from backend
   const fetchCameras = useCallback(async () => {
     try {
-      const res = await fetch("/api/cameras");
+      const res = await fetch(apiUrl("/api/cameras"));
       if (res.ok) {
         const data = await res.json();
         if (data.cameras && Array.isArray(data.cameras)) {
@@ -47,17 +58,16 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
 
     setIsSwitchingCamera(true);
     try {
-      const res = await fetch("/api/camera_select", {
+      const res = await fetch(apiUrl("/api/camera_select"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ camera_index: newIndex }),
       });
       if (res.ok) {
         setActiveCamera(newIndex);
-        // Refresh feed with a fresh timestamp
         setTimeout(() => {
           setStreamKey(Date.now());
-          setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
+          setSnapshotUrl(apiUrl(`/api/camera_snapshot?t=${Date.now()}`));
           setIsConnected(true);
           setHasError(false);
           setIsSwitchingCamera(false);
@@ -69,11 +79,84 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
     }
   };
 
-  // Snapshot polling mode (10 FPS) for environments where MJPEG streams stall
+  // Toggle in-browser camera streaming directly to Render backend
+  const toggleBrowserStreaming = async () => {
+    if (isBrowserStreaming) {
+      // Stop streaming
+      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+      if (browserWsRef.current) browserWsRef.current.close();
+      if (browserStreamRef.current) {
+        browserStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      setIsBrowserStreaming(false);
+      setBrowserStreamFps(0);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
+        audio: false,
+      });
+
+      browserStreamRef.current = stream;
+      if (videoElementRef.current) {
+        videoElementRef.current.srcObject = stream;
+        videoElementRef.current.play();
+      }
+
+      // Connect binary WebSocket to backend
+      const wsUrl = getRemoteFrameWebSocketUrl();
+      const ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
+      browserWsRef.current = ws;
+
+      let frameCount = 0;
+      let lastFpsTime = Date.now();
+
+      const canvas = canvasRef.current || document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext("2d");
+
+      streamIntervalRef.current = setInterval(() => {
+        if (!videoElementRef.current || videoElementRef.current.readyState < 2) return;
+
+        ctx.drawImage(videoElementRef.current, 0, 0, 640, 480);
+        canvas.toBlob(
+          (blob) => {
+            if (blob && ws.readyState === WebSocket.OPEN) {
+              blob.arrayBuffer().then((buf) => {
+                ws.send(buf);
+                frameCount++;
+                const now = Date.now();
+                if (now - lastFpsTime >= 1000) {
+                  setBrowserStreamFps(frameCount);
+                  frameCount = 0;
+                  lastFpsTime = now;
+                }
+              });
+            }
+          },
+          "image/jpeg",
+          0.65
+        );
+      }, 70); // ~14 FPS
+
+      setIsBrowserStreaming(true);
+      setIsConnected(true);
+      setHasError(false);
+    } catch (err) {
+      console.error("Failed to access browser camera:", err);
+      alert("Could not access camera: " + err.message);
+    }
+  };
+
+  // Snapshot polling mode (10 FPS)
   useEffect(() => {
     if (streamMode === "snapshot") {
       snapshotIntervalRef.current = setInterval(() => {
-        setSnapshotUrl(`/api/camera_snapshot?t=${Date.now()}`);
+        setSnapshotUrl(apiUrl(`/api/camera_snapshot?t=${Date.now()}`));
       }, 100);
     } else {
       if (snapshotIntervalRef.current) {
@@ -176,6 +259,23 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
             >
               🔍
             </button>
+            <button
+              type="button"
+              className="btn"
+              style={{
+                padding: "3px 10px",
+                fontSize: "11px",
+                height: "26px",
+                fontWeight: 600,
+                background: isBrowserStreaming ? "var(--primary)" : "var(--surface-raised)",
+                color: isBrowserStreaming ? "#0a1f14" : "var(--primary)",
+                border: "1px solid var(--primary)",
+              }}
+              onClick={toggleBrowserStreaming}
+              title="Stream your device / browser webcam directly to Anchor cloud backend"
+            >
+              {isBrowserStreaming ? `🟢 Streaming (${browserStreamFps} FPS)` : "📱 Stream Browser Cam"}
+            </button>
           </div>
 
           <button
@@ -213,10 +313,25 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
           position: "relative",
         }}
       >
-        {streamMode === "mjpeg" ? (
+        {/* Hidden / Active Video Element for Browser Webcam */}
+        <video
+          ref={videoElementRef}
+          playsInline
+          muted
+          style={{
+            display: isBrowserStreaming ? "block" : "none",
+            width: "100%",
+            maxHeight: "280px",
+            objectFit: "contain",
+            transform: "scaleX(-1)", // Mirrored for natural user feel
+          }}
+        />
+
+        {/* Remote MJPEG / Snapshot Stream from Backend */}
+        {!isBrowserStreaming && (streamMode === "mjpeg" ? (
           <img
             key={streamKey}
-            src={`/video_feed?t=${streamKey}`}
+            src={apiUrl(`/video_feed?t=${streamKey}`)}
             alt="Live Webcam Stream"
             onError={handleImgError}
             onLoad={() => {
@@ -248,7 +363,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
               maxHeight: "280px",
             }}
           />
-        )}
+        ))}
 
         {isSwitchingCamera && (
           <div
@@ -268,7 +383,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
           </div>
         )}
 
-        {hasError && (
+        {hasError && !isBrowserStreaming && (
           <div
             style={{
               position: "absolute",
@@ -278,24 +393,37 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              color: "white",
+              gap: "8px",
+              color: "#f87171",
+              fontSize: "12px",
               padding: "16px",
               textAlign: "center",
             }}
           >
-            <p style={{ fontWeight: 600, marginBottom: "6px" }}>
-              Reconnecting to Camera Feed…
-            </p>
+            <span>⚠️ No server camera attached.</span>
             <button
-              type="button"
               className="btn btn-primary"
-              style={{ fontSize: "12px", padding: "4px 12px", marginTop: "8px" }}
-              onClick={handleReconnect}
+              style={{ fontSize: "11px", padding: "4px 12px" }}
+              onClick={toggleBrowserStreaming}
             >
-              🔄 Retry Now
+              📱 Enable Browser / Device Camera
             </button>
           </div>
         )}
+      </div>
+
+      <div style={{ marginTop: "10px", fontSize: "11px", color: "var(--text-muted)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+        <span>
+          {isBrowserStreaming ? "🟢 Live Video Streaming to Render Backend" : "Face alignment & EAR liveness analysis active on backend."}
+        </span>
+        <a
+          href="/capture"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}
+        >
+          📱 Open Mobile Glasses / Cam Streamer &rarr;
+        </a>
       </div>
     </div>
   );

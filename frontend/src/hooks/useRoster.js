@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { apiUrl } from "../config/api.js";
 
 /**
  * useRoster — Manages loved ones profiles, memory notes, and face enrollment with backend persistence.
@@ -9,7 +10,7 @@ export function useRoster() {
 
   const fetchRoster = useCallback(async () => {
     try {
-      const res = await fetch("/api/roster");
+      const res = await fetch(apiUrl("/api/roster"));
       if (!res.ok) throw new Error("Failed to fetch roster");
       const list = await res.json();
       setProfiles(list);
@@ -25,7 +26,7 @@ export function useRoster() {
   }, [fetchRoster]);
 
   const addProfile = useCallback(async (data) => {
-    const res = await fetch("/api/roster", {
+    const res = await fetch(apiUrl("/api/roster"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -37,7 +38,7 @@ export function useRoster() {
   }, [fetchRoster]);
 
   const deleteProfile = useCallback(async (personId) => {
-    const res = await fetch(`/api/roster/${personId}`, {
+    const res = await fetch(apiUrl(`/api/roster/${personId}`), {
       method: "DELETE",
     });
     if (!res.ok) {
@@ -47,7 +48,7 @@ export function useRoster() {
   }, [fetchRoster]);
 
   const registerFace = useCallback(async (personId, imageBase64 = null) => {
-    const res = await fetch("/api/register_face", {
+    const res = await fetch(apiUrl("/api/register_face"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,7 +64,7 @@ export function useRoster() {
   }, [fetchRoster]);
 
   const clearFaceEncodings = useCallback(async (personId) => {
-    const res = await fetch(`/api/clear_encodings/${personId}`, {
+    const res = await fetch(apiUrl(`/api/clear_encodings/${personId}`), {
       method: "POST",
     });
     const data = await res.json();
@@ -75,7 +76,7 @@ export function useRoster() {
 
   const saveUpdatedNote = useCallback(async (personId, note, transcript = "") => {
     try {
-      const res = await fetch("/api/update_note", {
+      const res = await fetch(apiUrl("/api/update_note"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

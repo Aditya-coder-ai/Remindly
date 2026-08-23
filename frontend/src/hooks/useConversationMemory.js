@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { summarizeConversation } from "../services/summarize.js";
+import { apiUrl } from "../config/api.js";
 
 /**
  * useConversationMemory — Loop-Engineered continuous visit audio capture,
@@ -36,7 +37,7 @@ export function useConversationMemory({ sendCommand: initialSendCommand, connect
   // Helper: Persist segment to backend database
   const saveSegmentToBackend = async (visitId, segment) => {
     try {
-      await fetch(`/api/visits/${visitId}/transcript`, {
+      await fetch(apiUrl(`/api/visits/${visitId}/transcript`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,7 +171,7 @@ export function useConversationMemory({ sendCommand: initialSendCommand, connect
 
           if (sliceBlob.size > 1500) {
             try {
-              const res = await fetch("/api/transcribe", {
+              const res = await fetch(apiUrl("/api/transcribe"), {
                 method: "POST",
                 headers: { "Content-Type": sliceBlob.type || "audio/webm" },
                 body: sliceBlob,
@@ -332,7 +333,7 @@ export function useConversationMemory({ sendCommand: initialSendCommand, connect
           formData.append("ended_at", new Date().toISOString());
           formData.append("visit_id", activeVisitIdRef.current || "");
 
-          fetch("/api/visits/audio", {
+          fetch(apiUrl("/api/visits/audio"), {
             method: "POST",
             body: formData,
           }).catch((err) => console.warn("Background audio upload warning:", err));
@@ -417,7 +418,7 @@ export function useConversationMemory({ sendCommand: initialSendCommand, connect
   const catchUpTranscript = useCallback((visitId) => {
     if (!visitId) return;
     activeVisitIdRef.current = visitId;
-    fetch(`/api/visits/${visitId}/transcript`)
+    fetch(apiUrl(`/api/visits/${visitId}/transcript`))
       .then((res) => res.json())
       .then((data) => {
         if (data && data.success && data.segments) {

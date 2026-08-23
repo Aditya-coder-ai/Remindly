@@ -16,6 +16,8 @@
  *   - Zero-crash error recovery
  */
 
+import { apiUrl } from "../config/api.js";
+
 // ---------- Configuration ----------
 
 const DEFAULT_CONFIG = {
@@ -289,7 +291,7 @@ async function _startFallbackWhisperEngine() {
 
       try {
         _log("SENDING_TO_WHISPER", `${audioBlob.size} bytes`);
-        const res = await fetch("/api/transcribe", {
+        const res = await fetch(apiUrl("/api/transcribe"), {
           method: "POST",
           headers: { "Content-Type": audioBlob.type || "audio/webm" },
           body: audioBlob,

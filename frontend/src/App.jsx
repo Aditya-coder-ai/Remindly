@@ -5,6 +5,7 @@ import FlowWave from "./components/FlowWave/FlowWave.jsx";
 import { useWebSocket } from "./hooks/useWebSocket.js";
 import { useConversationMemory } from "./hooks/useConversationMemory.js";
 import { useRoster } from "./hooks/useRoster.js";
+import { apiUrl } from "./config/api.js";
 
 // Helper to generate a unique visit UUID
 function generateUUID() {
@@ -140,7 +141,7 @@ export default function App() {
   // Simulation triggers
   const handleSimulateArrive = async (personId) => {
     try {
-      await fetch("/api/simulate", {
+      await fetch(apiUrl("/api/simulate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "arrive", person_id: personId }),
@@ -152,7 +153,7 @@ export default function App() {
 
   const handleSimulateLeave = async () => {
     try {
-      await fetch("/api/simulate", {
+      await fetch(apiUrl("/api/simulate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "leave" }),

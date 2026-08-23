@@ -18,6 +18,8 @@
  * face recognition runs.
  */
 
+import { apiUrl } from "../config/api.js";
+
 let peer = null;
 let activeCall = null;
 let remoteStream = null;
@@ -252,7 +254,7 @@ async function _relayOneFrame() {
 
     if (!blob || blob.size < 100) return;
 
-    fetch("/api/remote_frame", {
+    fetch(apiUrl("/api/remote_frame"), {
       method: "POST",
       headers: { "Content-Type": "image/jpeg" },
       body: blob,

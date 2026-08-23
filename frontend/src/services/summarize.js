@@ -3,9 +3,11 @@
  * Condenses a visit conversation into ONE warm, gentle sentence.
  */
 
+import { apiUrl } from "../config/api.js";
+
 export const ANCHOR_API_CONFIG = {
   apiKey: "",
-  endpoint: "/api/groq",
+  endpoint: apiUrl("/api/groq"),
   model: "groq/compound-mini",
   maxTokens: 60,
   temperature: 0.7,
