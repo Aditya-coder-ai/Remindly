@@ -592,6 +592,11 @@ async def video_feed():
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+        },
     )
 
 
@@ -601,7 +606,15 @@ def camera_snapshot():
     frame_bytes = recognition_service.get_latest_frame_jpeg()
     if not frame_bytes:
         raise HTTPException(status_code=503, detail="No camera frame available")
-    return Response(content=frame_bytes, media_type="image/jpeg")
+    return Response(
+        content=frame_bytes,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

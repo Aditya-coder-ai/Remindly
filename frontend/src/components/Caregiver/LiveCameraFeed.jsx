@@ -7,7 +7,8 @@ import { apiUrl, getRemoteFrameWebSocketUrl } from "../../config/api.js";
  * Also includes instant In-Browser WebCam Streaming for cloud deployments (Vercel + Render).
  */
 export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
-  const [streamMode, setStreamMode] = useState("mjpeg"); // 'mjpeg' | 'snapshot' | 'browser'
+  const isCloud = typeof window !== "undefined" && (window.location.hostname.includes("vercel.app") || window.location.hostname.includes("onrender.com"));
+  const [streamMode, setStreamMode] = useState(isCloud ? "snapshot" : "mjpeg"); // 'snapshot' (cloud-resilient) | 'mjpeg'
   const [streamKey, setStreamKey] = useState(Date.now());
   const [snapshotUrl, setSnapshotUrl] = useState(apiUrl(`/api/camera_snapshot?t=${Date.now()}`));
   const [isConnected, setIsConnected] = useState(true);
@@ -170,12 +171,12 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
     }
   };
 
-  // Snapshot polling mode (10 FPS)
+  // Snapshot polling mode (15 FPS)
   useEffect(() => {
-    if (streamMode === "snapshot") {
+    if (streamMode === "snapshot" && !isBrowserStreaming) {
       snapshotIntervalRef.current = setInterval(() => {
         setSnapshotUrl(apiUrl(`/api/camera_snapshot?t=${Date.now()}`));
-      }, 100);
+      }, 75);
     } else {
       if (snapshotIntervalRef.current) {
         clearInterval(snapshotIntervalRef.current);
@@ -187,7 +188,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
         clearInterval(snapshotIntervalRef.current);
       }
     };
-  }, [streamMode]);
+  }, [streamMode, isBrowserStreaming]);
 
   const handleReconnect = () => {
     setHasError(false);
@@ -350,6 +351,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
           <img
             key={streamKey}
             src={apiUrl(`/video_feed?t=${streamKey}`)}
+            crossOrigin="anonymous"
             alt="Live Webcam Stream"
             onError={handleImgError}
             onLoad={() => {
@@ -367,6 +369,7 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
         ) : (
           <img
             src={snapshotUrl}
+            crossOrigin="anonymous"
             alt="Live Webcam Snapshot"
             onError={handleImgError}
             onLoad={() => {
