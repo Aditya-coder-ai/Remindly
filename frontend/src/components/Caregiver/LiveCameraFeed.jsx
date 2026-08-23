@@ -233,9 +233,9 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
             }
           },
           "image/jpeg",
-          0.68
+          0.60
         );
-      }, 65); // ~15 FPS transmission
+      }, 45); // ~22 FPS real-time transmission for instant recognition
 
       setIsBrowserStreaming(true);
       setIsConnected(true);
