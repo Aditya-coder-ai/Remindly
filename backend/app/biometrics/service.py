@@ -16,6 +16,7 @@ import asyncio
 import base64
 import logging
 import os
+import sys
 import threading
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -57,6 +58,52 @@ from .recognizer import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_open_camera(idx: int) -> Optional[cv2.VideoCapture]:
+    """Platform-safe camera device opener with full error suppression for headless/cloud servers."""
+    # On Linux / headless / Docker / Render: check if /dev/video{idx} exists
+    if sys.platform.startswith("linux"):
+        if not os.path.exists(f"/dev/video{idx}"):
+            return None
+        try:
+            c = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+            if c and c.isOpened():
+                return c
+        except Exception:
+            pass
+        try:
+            c = cv2.VideoCapture(idx)
+            if c and c.isOpened():
+                return c
+        except Exception:
+            return None
+
+    # On Windows: use DSHOW with fallback to default backend
+    elif sys.platform == "win32":
+        try:
+            c = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            if c and c.isOpened():
+                return c
+        except Exception:
+            pass
+        try:
+            c = cv2.VideoCapture(idx)
+            if c and c.isOpened():
+                return c
+        except Exception:
+            return None
+
+    # Other platforms (macOS / generic):
+    else:
+        try:
+            c = cv2.VideoCapture(idx)
+            if c and c.isOpened():
+                return c
+        except Exception:
+            return None
+
+    return None
 
 
 def _draw_rounded_rect(
@@ -185,31 +232,38 @@ class RecognitionService:
     # Multi-Camera Device Enumeration & Dynamic Hot-Switching
     # -----------------------------------------------------------------------
 
-    def get_available_cameras(self, max_probe: int = 4) -> List[Dict[str, Any]]:
+    def get_available_cameras(self, max_probe: int = 2) -> List[Dict[str, Any]]:
         """Quickly probe and list available video capture devices."""
+        # If active camera is already confirmed working, return immediately
+        if self._camera_available:
+            return [{
+                "index": self.camera_index,
+                "name": f"Camera {self.camera_index} (Active: {'Default / Integrated' if self.camera_index == 0 else 'External / USB'})",
+                "is_active": True,
+            }]
+
+        # In cloud / headless Linux environments without /dev/video*, return standby mode safely
+        if sys.platform.startswith("linux") and not any(os.path.exists(f"/dev/video{i}") for i in range(max_probe)):
+            return [{
+                "index": 0,
+                "name": "Camera 0 (Standby / Cloud)",
+                "is_active": True,
+            }]
+
         cameras = []
         for idx in range(max_probe):
-            # If it's the currently active camera and working, report it immediately
-            if idx == self.camera_index and self._camera_available:
-                cameras.append({
-                    "index": idx,
-                    "name": f"Camera {idx} (Active: {'Default / Integrated' if idx == 0 else 'External / USB'})",
-                    "is_active": True,
-                })
-                continue
-
-            test_cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-            if not test_cap.isOpened():
-                test_cap = cv2.VideoCapture(idx)
-
-            if test_cap.isOpened():
+            test_cap = _safe_open_camera(idx)
+            if test_cap and test_cap.isOpened():
                 name = f"Camera {idx} ({'Default / Integrated' if idx == 0 else 'External / USB'})"
                 cameras.append({
                     "index": idx,
                     "name": name,
                     "is_active": (idx == self.camera_index),
                 })
-                test_cap.release()
+                try:
+                    test_cap.release()
+                except Exception:
+                    pass
 
         if not cameras:
             cameras.append({
@@ -387,20 +441,14 @@ class RecognitionService:
         cap: Optional[cv2.VideoCapture] = None
         current_opened_index = -1
 
-        def _open_camera(idx: int) -> Optional[cv2.VideoCapture]:
-            c = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-            if not c.isOpened():
-                c = cv2.VideoCapture(idx)
-            return c if c.isOpened() else None
-
         try:
-            cap = _open_camera(self.camera_index)
-            if cap:
+            cap = _safe_open_camera(self.camera_index)
+            if cap and cap.isOpened():
                 current_opened_index = self.camera_index
                 self._camera_available = True
             else:
                 self._camera_available = False
-                logger.warning("Webcam index %d not accessible; running in standby/remote mode.", self.camera_index)
+                logger.info("Webcam index %d not accessible; running in standby/remote mode.", self.camera_index)
 
             self.broadcast_event({"type": "status", "data": self.get_status()})
 
@@ -409,9 +457,12 @@ class RecognitionService:
                 if self._camera_switch_requested.is_set():
                     self._camera_switch_requested.clear()
                     if cap and cap.isOpened():
-                        cap.release()
-                    cap = _open_camera(self.camera_index)
-                    if cap:
+                        try:
+                            cap.release()
+                        except Exception:
+                            pass
+                    cap = _safe_open_camera(self.camera_index)
+                    if cap and cap.isOpened():
                         current_opened_index = self.camera_index
                         self._camera_available = True
                         logger.info("Successfully switched to camera index %d", self.camera_index)
@@ -427,16 +478,21 @@ class RecognitionService:
                 self._check_remote_timeout()
 
                 if cap is None or not cap.isOpened():
-                    time.sleep(1.0)
-                    cap = _open_camera(self.camera_index)
-                    if cap:
-                        current_opened_index = self.camera_index
-                        self._camera_available = True
-                        self.broadcast_event({"type": "status", "data": self.get_status()})
+                    time.sleep(4.0)
+                    if not self._remote_stream_alive:
+                        cap = _safe_open_camera(self.camera_index)
+                        if cap and cap.isOpened():
+                            current_opened_index = self.camera_index
+                            self._camera_available = True
+                            self.broadcast_event({"type": "status", "data": self.get_status()})
                     continue
 
-                ret, frame = cap.read()
-                if not ret:
+                try:
+                    ret, frame = cap.read()
+                except Exception:
+                    ret, frame = False, None
+
+                if not ret or frame is None:
                     time.sleep(0.01)
                     continue
 
@@ -451,8 +507,11 @@ class RecognitionService:
         except Exception as e:
             logger.error("Error in camera capture loop: %s", e, exc_info=True)
         finally:
-            if cap is not None and cap.isOpened():
-                cap.release()
+            if cap is not None:
+                try:
+                    cap.release()
+                except Exception:
+                    pass
             self._camera_available = False
             self.broadcast_event({"type": "status", "data": self.get_status()})
 

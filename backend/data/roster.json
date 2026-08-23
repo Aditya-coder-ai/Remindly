@@ -1908,9 +1908,33 @@
     "relationship": "Visitor",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You have a pleasant visit and share a warm thank‑you with your friend. It feels good to say thanks.",
-    "last_visited": "August 23, 2026, 08:28 AM",
+    "note": "You had a nice visit today.",
+    "last_visited": "August 23, 2026, 08:35 AM",
     "history": [
+      {
+        "timestamp": 1787454324.9070234,
+        "date_str": "August 23, 2026, 08:35 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787454308.2137692,
+        "date_str": "August 23, 2026, 08:35 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787454304.665808,
+        "date_str": "August 23, 2026, 08:35 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787454275.6460307,
+        "date_str": "August 23, 2026, 08:34 AM",
+        "note": "You had a visit with Adi.",
+        "transcript": "Speaker: I'm going to go to the next one."
+      },
       {
         "timestamp": 1787453913.398512,
         "date_str": "August 23, 2026, 08:28 AM",
@@ -2006,30 +2030,6 @@
         "date_str": "August 23, 2026, 05:48 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
-      },
-      {
-        "timestamp": 1787444331.930891,
-        "date_str": "August 23, 2026, 05:48 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787444330.5741806,
-        "date_str": "August 23, 2026, 05:48 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787444325.8920019,
-        "date_str": "August 23, 2026, 05:48 AM",
-        "note": "Speaker: who said that you are speak badtamiji Ko Main theek kar\nSpeaker: Jab tak bolane ko bola Na Jaaye",
-        "transcript": "Speaker: who said that you are speak badtamiji Ko Main theek kar\nSpeaker: Jab tak bolane ko bola Na Jaaye"
-      },
-      {
-        "timestamp": 1787444244.690553,
-        "date_str": "August 23, 2026, 05:47 AM",
-        "note": "Speaker: Mere Seene connected Ho",
-        "transcript": "Speaker: Mere Seene connected Ho"
       }
     ],
     "encodings": [
@@ -2658,5 +2658,29 @@
         0.006510988498198633
       ]
     ]
+  },
+  {
+    "person_id": "grandma_anna",
+    "name": "Anna Jenkins",
+    "relationship": "Grandmother",
+    "avatar_color": "#2f6f4f",
+    "avatar_url": null,
+    "note": "Anna and you watered the balcony sunflowers together.",
+    "last_visited": "August 23, 2026, 08:40 PM",
+    "history": [
+      {
+        "timestamp": 1787497809.2182693,
+        "date_str": "August 23, 2026, 08:40 PM",
+        "note": "Anna and you watered the balcony sunflowers together.",
+        "transcript": "Let's water these lovely flowers today."
+      },
+      {
+        "timestamp": 1787457064.5861588,
+        "date_str": "August 23, 2026, 09:21 AM",
+        "note": "Anna and you watered the balcony sunflowers together.",
+        "transcript": "Let's water these lovely flowers today."
+      }
+    ],
+    "encodings": []
   }
 ]

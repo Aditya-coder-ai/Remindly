@@ -96,6 +96,14 @@ export default function App() {
   }, [stopCaptureAndSummarize, saveUpdatedNote, transcript]);
 
   const handleServerEvent = useCallback((event) => {
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("anchor-ws-message", { detail: event }));
+      } catch (e) {
+        // ignore in non-browser environments
+      }
+    }
+
     switch (event.type) {
       case "recognized":
         handlePersonArrived(event.person);

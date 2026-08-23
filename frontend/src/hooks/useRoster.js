@@ -13,7 +13,7 @@ export function useRoster() {
       const res = await fetch(apiUrl("/api/roster"));
       if (!res.ok) throw new Error("Failed to fetch roster");
       const list = await res.json();
-      setProfiles(list);
+      setProfiles(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Roster fetch error:", err);
     } finally {
@@ -32,9 +32,11 @@ export function useRoster() {
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      throw new Error("Failed to create profile");
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || errData.error || "Failed to create profile");
     }
     await fetchRoster();
+    return await res.json().catch(() => ({ success: true }));
   }, [fetchRoster]);
 
   const deleteProfile = useCallback(async (personId) => {
@@ -42,36 +44,54 @@ export function useRoster() {
       method: "DELETE",
     });
     if (!res.ok) {
-      throw new Error("Failed to delete profile");
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || errData.error || "Failed to delete profile");
     }
     await fetchRoster();
   }, [fetchRoster]);
 
   const registerFace = useCallback(async (personId, imageBase64 = null) => {
-    const res = await fetch(apiUrl("/api/register_face"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        person_id: personId,
-        image_base64: imageBase64,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      await fetchRoster();
+    try {
+      const res = await fetch(apiUrl("/api/register_face"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: personId,
+          image_base64: imageBase64,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        await fetchRoster();
+        return {
+          success: true,
+          encodings_count: data.encodings_count,
+          message: data.message || "Face snapshot enrolled successfully!",
+        };
+      }
+      return {
+        success: false,
+        error: data.detail || data.error || `Face registration failed (HTTP ${res.status})`,
+      };
+    } catch (err) {
+      return { success: false, error: err.message || "Network error registering face" };
     }
-    return data;
   }, [fetchRoster]);
 
   const clearFaceEncodings = useCallback(async (personId) => {
-    const res = await fetch(apiUrl(`/api/clear_encodings/${personId}`), {
-      method: "POST",
-    });
-    const data = await res.json();
-    if (res.ok) {
-      await fetchRoster();
+    try {
+      const res = await fetch(apiUrl(`/api/clear_encodings/${personId}`), {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await fetchRoster();
+        return { success: true, message: "Face encodings cleared." };
+      }
+      return { success: false, error: data.detail || data.error || "Failed to clear encodings" };
+    } catch (err) {
+      return { success: false, error: err.message || "Network error clearing encodings" };
     }
-    return data;
   }, [fetchRoster]);
 
   const saveUpdatedNote = useCallback(async (personId, note, transcript = "") => {
