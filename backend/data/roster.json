@@ -5,21 +5,9 @@
     "relationship": "friend",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:37 AM",
+    "note": "Speaker: Maharaja",
+    "last_visited": "August 23, 2026, 05:04 AM",
     "history": [
-      {
-        "timestamp": 1787443622.9838781,
-        "date_str": "August 23, 2026, 05:37 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443616.2689047,
-        "date_str": "August 23, 2026, 05:36 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
       {
         "timestamp": 1787441673.4289787,
         "date_str": "August 23, 2026, 05:04 AM",
@@ -1921,43 +1909,55 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:36 AM",
+    "last_visited": "August 23, 2026, 05:41 AM",
     "history": [
       {
-        "timestamp": 1787443608.6193893,
-        "date_str": "August 23, 2026, 05:36 AM",
+        "timestamp": 1787443900.7808383,
+        "date_str": "August 23, 2026, 05:41 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787443604.3226643,
-        "date_str": "August 23, 2026, 05:36 AM",
+        "timestamp": 1787443900.4225156,
+        "date_str": "August 23, 2026, 05:41 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787443596.8446736,
-        "date_str": "August 23, 2026, 05:36 AM",
+        "timestamp": 1787443898.5735404,
+        "date_str": "August 23, 2026, 05:41 AM",
         "note": "You had a nice visit today.",
         "transcript": ""
       },
       {
-        "timestamp": 1787443594.226364,
-        "date_str": "August 23, 2026, 05:36 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787443893.7433634,
+        "date_str": "August 23, 2026, 05:41 AM",
+        "note": "You had a visit with Adi.",
+        "transcript": "Speaker: I'll get you. Hello?"
       },
       {
-        "timestamp": 1787443592.3380427,
-        "date_str": "August 23, 2026, 05:36 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787443893.5604193,
+        "date_str": "August 23, 2026, 05:41 AM",
+        "note": "Speaker: hello\nSpeaker: can you hear me",
+        "transcript": "Speaker: hello\nSpeaker: can you hear me"
       },
       {
-        "timestamp": 1787443589.990829,
-        "date_str": "August 23, 2026, 05:36 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "timestamp": 1787443857.4394567,
+        "date_str": "August 23, 2026, 05:40 AM",
+        "note": "Speaker: I guess",
+        "transcript": "Speaker: I guess"
+      },
+      {
+        "timestamp": 1787443857.4275672,
+        "date_str": "August 23, 2026, 05:40 AM",
+        "note": "You had a visit with Adi.",
+        "transcript": "Speaker: here speaker i guess"
+      },
+      {
+        "timestamp": 1787443791.8411846,
+        "date_str": "August 23, 2026, 05:39 AM",
+        "note": "Speaker: I guess",
+        "transcript": "Speaker: I guess"
       },
       {
         "timestamp": 1787443579.9772658,
@@ -2030,18 +2030,6 @@
         "date_str": "August 23, 2026, 05:05 AM",
         "note": "Speaker: Nahin hota hai ki aapane aap change ho jaaye",
         "transcript": "Speaker: Nahin hota hai ki aapane aap change ho jaaye"
-      },
-      {
-        "timestamp": 1787441689.2074394,
-        "date_str": "August 23, 2026, 05:04 AM",
-        "note": "Speaker: change Nahin Hota ki apne aap change ho jaaye",
-        "transcript": "Speaker: change Nahin Hota ki apne aap change ho jaaye"
-      },
-      {
-        "timestamp": 1787441647.54571,
-        "date_str": "August 23, 2026, 05:04 AM",
-        "note": "Speaker: Hanuman Chalisa",
-        "transcript": "Speaker: Hanuman Chalisa"
       }
     ],
     "encodings": [

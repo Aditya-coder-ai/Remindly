@@ -25,7 +25,13 @@ ROSTER_FILE = DATA_DIR / "roster.json"
 MODEL_PATH = str(APP_DIR / "biometrics" / "models" / "face_landmarker.task")
 
 # Frontend production distribution path
-FRONTEND_DIST_DIR = ROOT_DIR / "frontend" / "dist"
+_dist_candidates = [
+    ROOT_DIR / "frontend" / "dist",
+    APP_DIR / "static" / "dist",
+    Path("/app/frontend/dist"),
+    BACKEND_DIR / "frontend" / "dist",
+]
+FRONTEND_DIST_DIR = next((p for p in _dist_candidates if (p / "index.html").exists()), ROOT_DIR / "frontend" / "dist")
 STATIC_DIR = APP_DIR / "static"
 
 # Database Settings
