@@ -1909,8 +1909,20 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:50 AM",
+    "last_visited": "August 23, 2026, 05:53 AM",
     "history": [
+      {
+        "timestamp": 1787444598.395496,
+        "date_str": "August 23, 2026, 05:53 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787444596.1993437,
+        "date_str": "August 23, 2026, 05:53 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
       {
         "timestamp": 1787444454.0896015,
         "date_str": "August 23, 2026, 05:50 AM",
@@ -2018,18 +2030,6 @@
         "date_str": "August 23, 2026, 05:41 AM",
         "note": "Speaker: hello\nSpeaker: can you hear me",
         "transcript": "Speaker: hello\nSpeaker: can you hear me"
-      },
-      {
-        "timestamp": 1787443857.4394567,
-        "date_str": "August 23, 2026, 05:40 AM",
-        "note": "Speaker: I guess",
-        "transcript": "Speaker: I guess"
-      },
-      {
-        "timestamp": 1787443857.4275672,
-        "date_str": "August 23, 2026, 05:40 AM",
-        "note": "You had a visit with Adi.",
-        "transcript": "Speaker: here speaker i guess"
       }
     ],
     "encodings": [

@@ -93,12 +93,30 @@ export default function LiveCameraFeed({ isVisitorPresent, visitorName }) {
       return;
     }
 
+    let stream = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
         audio: false,
       });
+    } catch (err1) {
+      try {
+        // Fallback to simple unconstrained video
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      } catch (err2) {
+        console.error("Camera acquisition failed:", err2);
+        if (err2.name === "NotReadableError" || err2.message?.includes("Could not start video source")) {
+          alert("Camera is in use by another application or tab (e.g. Zoom, Teams, or another browser window). Please close other camera apps and try again.");
+        } else if (err2.name === "NotAllowedError" || err2.name === "PermissionDeniedError") {
+          alert("Camera permission denied. Please click the camera/lock icon in your browser address bar to allow access.");
+        } else {
+          alert("Could not access camera: " + (err2.message || err2.name));
+        }
+        return;
+      }
+    }
 
+    try {
       browserStreamRef.current = stream;
       if (videoElementRef.current) {
         videoElementRef.current.srcObject = stream;
