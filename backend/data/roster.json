@@ -5,9 +5,21 @@
     "relationship": "friend",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "Speaker: Maharaja",
-    "last_visited": "August 23, 2026, 05:04 AM",
+    "note": "You had a nice visit today.",
+    "last_visited": "August 23, 2026, 05:37 AM",
     "history": [
+      {
+        "timestamp": 1787443622.9838781,
+        "date_str": "August 23, 2026, 05:37 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443616.2689047,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
       {
         "timestamp": 1787441673.4289787,
         "date_str": "August 23, 2026, 05:04 AM",
@@ -1909,43 +1921,79 @@
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
     "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:28 AM",
+    "last_visited": "August 23, 2026, 05:36 AM",
     "history": [
       {
-        "timestamp": 1787443108.2875087,
+        "timestamp": 1787443608.6193893,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443604.3226643,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443596.8446736,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443594.226364,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443592.3380427,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443589.990829,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "You had a nice visit today.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787443579.9772658,
+        "date_str": "August 23, 2026, 05:36 AM",
+        "note": "Speaker: oh shit",
+        "transcript": "Speaker: oh shit"
+      },
+      {
+        "timestamp": 1787443524.948574,
+        "date_str": "August 23, 2026, 05:35 AM",
+        "note": "Speaker: congratulation",
+        "transcript": "Speaker: congratulation"
+      },
+      {
+        "timestamp": 1787443465.7490478,
+        "date_str": "August 23, 2026, 05:34 AM",
+        "note": "Speaker: use karte hain ki kya use karte hain\nSpeaker: sahi mein bhai mere ko Nasha ho raha hai\nSpeaker: continue",
+        "transcript": "Speaker: use karte hain ki kya use karte hain\nSpeaker: sahi mein bhai mere ko Nasha ho raha hai\nSpeaker: continue"
+      },
+      {
+        "timestamp": 1787443266.9980557,
+        "date_str": "August 23, 2026, 05:31 AM",
+        "note": "Speaker: Siya Ram Janki Baithe",
+        "transcript": "Speaker: Siya Ram Janki Baithe"
+      },
+      {
+        "timestamp": 1787443180.8552325,
+        "date_str": "August 23, 2026, 05:29 AM",
+        "note": "Speaker: Jindagi to gujariya\nSpeaker: Karva Denge",
+        "transcript": "Speaker: Jindagi to gujariya\nSpeaker: Karva Denge"
+      },
+      {
+        "timestamp": 1787443136.6747956,
         "date_str": "August 23, 2026, 05:28 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443103.8159432,
-        "date_str": "August 23, 2026, 05:28 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443093.1271498,
-        "date_str": "August 23, 2026, 05:28 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443079.0125108,
-        "date_str": "August 23, 2026, 05:27 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443047.0183322,
-        "date_str": "August 23, 2026, 05:27 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
-      },
-      {
-        "timestamp": 1787443042.4720657,
-        "date_str": "August 23, 2026, 05:27 AM",
-        "note": "You had a nice visit today.",
-        "transcript": ""
+        "note": "Speaker: dosti mein Dosti",
+        "transcript": "Speaker: dosti mein Dosti"
       },
       {
         "timestamp": 1787443038.7336586,
@@ -1994,42 +2042,6 @@
         "date_str": "August 23, 2026, 05:04 AM",
         "note": "Speaker: Hanuman Chalisa",
         "transcript": "Speaker: Hanuman Chalisa"
-      },
-      {
-        "timestamp": 1787441496.7627347,
-        "date_str": "August 23, 2026, 05:01 AM",
-        "note": "Speaker: Hanuman Chalisa",
-        "transcript": "Speaker: Hanuman Chalisa"
-      },
-      {
-        "timestamp": 1787441289.5491135,
-        "date_str": "August 23, 2026, 04:58 AM",
-        "note": "Speaker: Sone dena\nSpeaker: blah blah blah blah blah blah install",
-        "transcript": "Speaker: Sone dena\nSpeaker: blah blah blah blah blah blah install"
-      },
-      {
-        "timestamp": 1787439868.1874619,
-        "date_str": "August 23, 2026, 04:34 AM",
-        "note": "Speaker: Kya Tumne Apna Kam Kiya",
-        "transcript": "Speaker: Kya Tumne Apna Kam Kiya"
-      },
-      {
-        "timestamp": 1787439684.3794665,
-        "date_str": "August 23, 2026, 04:31 AM",
-        "note": "Speaker: Tera Saath Hai",
-        "transcript": "Speaker: Tera Saath Hai"
-      },
-      {
-        "timestamp": 1787438232.0355787,
-        "date_str": "August 23, 2026, 04:07 AM",
-        "note": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni",
-        "transcript": "Speaker: Sahi kar rahe ho bhai\nSpeaker: acchi hai yaar Paisa Nahin apni"
-      },
-      {
-        "timestamp": 1787438118.608601,
-        "date_str": "August 23, 2026, 04:05 AM",
-        "note": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun",
-        "transcript": "Speaker: Kuchh Nahin Baj Raha bhai\nSpeaker: pata nahin\nSpeaker: Main To gardan nahin mila raha hun"
       }
     ],
     "encodings": [

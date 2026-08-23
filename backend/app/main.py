@@ -805,23 +805,40 @@ async def flow_wave():
     raise HTTPException(status_code=404, detail="flow_wave.html not found")
 
 
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    """Lightweight health check endpoint for Render/Cloud monitoring."""
+    return {"status": "healthy", "service": "anchor-backend", "version": "1.0.0"}
+
+
 @app.get("/")
-async def root_index():
+@app.get("/{full_path:path}")
+async def serve_spa_or_index(full_path: str = ""):
+    # If a specific static file in dist was requested
+    if full_path:
+        requested_file = FRONTEND_DIST_DIR / full_path
+        if requested_file.exists() and requested_file.is_file():
+            return FileResponse(str(requested_file))
+        
+    # Serve React SPA index.html
     dist_index = FRONTEND_DIST_DIR / "index.html"
     if dist_index.exists():
         return FileResponse(str(dist_index))
+
+    # Fallback to standalone flow-wave visual scene
     flow_wave_file = STATIC_DIR / "flow_wave.html"
     if flow_wave_file.exists():
         return FileResponse(str(flow_wave_file))
+
     return HTMLResponse(
         """
         <html>
             <head><title>Anchor Backend Server</title></head>
             <body style="font-family: sans-serif; padding: 40px; background: #121c17; color: #e0f0e8;">
                 <h1>⚓ Anchor Companion Backend is Running</h1>
-                <p>FastAPI server active on port 8000.</p>
+                <p>FastAPI server is live and healthy.</p>
                 <p><a href="/flow-wave" style="color:#34e89a;">View Three.js Flow Wave Scene &rarr;</a></p>
-                <p>To run the frontend dev server, run: <code>cd frontend && npm run dev</code></p>
             </body>
         </html>
         """
