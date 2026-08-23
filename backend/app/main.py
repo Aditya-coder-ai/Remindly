@@ -18,6 +18,11 @@ if sys.platform == "win32":
 import json
 import logging
 import os
+import sys
+
+# Ensure CPU mode for MediaPipe in headless/cloud environments
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+os.environ["GLOG_minloglevel"] = "3"
 import urllib.error
 import urllib.request
 from contextlib import asynccontextmanager

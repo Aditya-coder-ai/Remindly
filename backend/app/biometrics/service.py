@@ -541,9 +541,17 @@ class RecognitionService:
                 min_face_presence_confidence=0.45,
                 min_tracking_confidence=0.45,
             )
-            landmarker = FaceLandmarker.create_from_options(options)
-            if self._recognizer:
-                self._recognizer._landmarker = landmarker
+            try:
+                landmarker = FaceLandmarker.create_from_options(options)
+                if self._recognizer:
+                    self._recognizer._landmarker = landmarker
+            except Exception as le:
+                logger.warning(
+                    "Could not initialize MediaPipe FaceLandmarker on this host (%s). "
+                    "In headless Linux containers, ensure libegl1, libgl1, and libglib2.0-0 are installed.",
+                    le,
+                )
+                landmarker = None
 
             last_processed_seq = -1
             next_tick = time.monotonic()
