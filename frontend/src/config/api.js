@@ -10,9 +10,12 @@ export const RENDER_BACKEND_URL = "https://remindly-2-tqcx.onrender.com";
 export function getBackendUrl() {
   if (typeof window === "undefined") return RENDER_BACKEND_URL;
 
-  // Local development override
+  // Local development: if running on any frontend dev server (port 3000, 3001, 5173, etc.), target FastAPI on 8000
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return window.location.port === "3000" ? "http://localhost:8000" : window.location.origin;
+    if (window.location.port !== "8000") {
+      return `http://${window.location.hostname}:8000`;
+    }
+    return window.location.origin;
   }
 
   // Vercel deployment: target live Render backend

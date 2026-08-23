@@ -1908,9 +1908,21 @@
     "relationship": "Visitor",
     "avatar_color": "#2f6f4f",
     "avatar_url": null,
-    "note": "You had a nice visit today.",
-    "last_visited": "August 23, 2026, 05:53 AM",
+    "note": "You have a pleasant visit and share a warm thank‑you with your friend. It feels good to say thanks.",
+    "last_visited": "August 23, 2026, 08:28 AM",
     "history": [
+      {
+        "timestamp": 1787453913.398512,
+        "date_str": "August 23, 2026, 08:28 AM",
+        "note": "You have a pleasant visit and share a warm thank‑you with your friend. It feels good to say thanks.",
+        "transcript": ""
+      },
+      {
+        "timestamp": 1787453758.5142806,
+        "date_str": "August 23, 2026, 08:25 AM",
+        "note": "You had a visit today, you shared your thoughts, and you stayed comfortable, which felt right.",
+        "transcript": ""
+      },
       {
         "timestamp": 1787444598.395496,
         "date_str": "August 23, 2026, 05:53 AM",
@@ -2018,18 +2030,6 @@
         "date_str": "August 23, 2026, 05:47 AM",
         "note": "Speaker: Mere Seene connected Ho",
         "transcript": "Speaker: Mere Seene connected Ho"
-      },
-      {
-        "timestamp": 1787443893.7433634,
-        "date_str": "August 23, 2026, 05:41 AM",
-        "note": "You had a visit with Adi.",
-        "transcript": "Speaker: I'll get you. Hello?"
-      },
-      {
-        "timestamp": 1787443893.5604193,
-        "date_str": "August 23, 2026, 05:41 AM",
-        "note": "Speaker: hello\nSpeaker: can you hear me",
-        "transcript": "Speaker: hello\nSpeaker: can you hear me"
       }
     ],
     "encodings": [
